@@ -1,0 +1,5 @@
+DONE
+Replaced prototype/intent_router.py (fake accuracy numbers, illustrative-but-fabricated assist/replace percentages) with prototype/crew_routing.py, which draws a single explanatory diagram (crew_routing.png) of the shipped routing architecture: signals -> CHAAP PII layer -> Neo4j memory graph + zero-shot classifier -> intent -> matching crew -> sources -> assist actions. Pure boxes/arrows, no invented metrics, tagged "concept sketch of the shipped architecture" per BRIEF2.
+Added prototype/figures/ to .gitignore and git rm --cached the two old tracked PNGs (assist_vs_replace.png, intent_confidence.png); verified crew_routing.png regenerates on disk via the venv/MPLCONFIGDIR command and that git ls-files shows no prototype PNGs tracked (only the unrelated browser/src/components/gyrus_icon.png remains).
+Rewrote the README Prototype section to describe the new diagram honestly and switched the embed to the hosted Supabase URL for Gyrus, keeping the local regenerate command.
+Did not touch .git config, did not commit or push; left backend/, browser/, model-finetune/ untouched.
