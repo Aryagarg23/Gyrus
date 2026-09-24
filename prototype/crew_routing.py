@@ -8,8 +8,7 @@ behind it, just the pipeline as built (see backend/src/fivedvector.py,
 backend/tools/chaap_anonymize.py, backend/src/query_orch.py,
 backend/MCP/newscrew_http.py, researchcrew.py).
 
-Run: MPLCONFIGDIR=/home/arya/projects/hackathons/.mplcache \
-     /home/arya/projects/hackathons/.venv/bin/python prototype/crew_routing.py
+Run: python -m pip install matplotlib && python prototype/crew_routing.py
 """
 import os
 
@@ -18,8 +17,6 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
-
-plt.style.use("/home/arya/projects/hackathons/.style/garg-paper.mplstyle")
 
 FIGDIR = os.path.join(os.path.dirname(__file__), "figures")
 os.makedirs(FIGDIR, exist_ok=True)

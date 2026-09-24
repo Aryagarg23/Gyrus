@@ -12,7 +12,7 @@ https://github.com/user-attachments/assets/02b633c0-783a-4aa4-b7f7-60a021f90381
 
 Gyrus watches what you search and builds a memory graph of it in Neo4j: queries, the concepts they cluster into, and the links you click. Every query goes through an intent classifier first — Research, Answer, Transactional, News, or Navigational — and what happens next depends on the intent. A Research or News query gets handed to a CrewAI "crew" that pulls from Exa, arXiv, Semantic Scholar, GDELT, or NewsAPI and comes back with a consolidated set of links. Everything else just passes through.
 
-Before any query text leaves the machine for an external API or model, a PII scrubber (CHAAP) strips emails, phone numbers, SSNs, card numbers, and names out of it.
+The repo includes CHAAP, a best-effort regex scrubber used on some classification and graph paths. It is not a privacy guarantee: the current `/api/search` route passes the original query to News or Research crews after classification, and those paths can call external services. Do not use the prototype with sensitive queries.
 
 The browser itself is an Electron app with a custom webview shell, not a wrapper around Chrome's UI.
 
@@ -21,16 +21,23 @@ The browser itself is an Electron app with a custom webview shell, not a wrapper
 - **Intent detection** — `backend/src/fivedvector.py` scores each query against two signal sources: a lookup over past DB behavior, and a zero-shot DeBERTa classifier (`backend/tools/intent_zero_shot_classifier.py`, ensembled over four hypothesis templates) — and takes whichever source is most confident. `model-finetune/roberta.py` is a separate Colab notebook that fine-tunes RoBERTa on the ORCAS-I-2M query dataset (~2M queries) for the same intent split, to check the zero-shot approach against a supervised baseline.
 - **Memory graph** — `backend/src/query_orch.py` embeds each query's concept with `sentence-transformers` (MiniLM) and writes it into Neo4j as `Concept`, `Query`, and `Link` nodes, connected by `SEARCHED_BY` and `CLICKED` edges. A new concept merges into an existing one above a cosine-similarity threshold instead of duplicating it.
 - **Crews** — `backend/MCP/newscrew_http.py` and `researchcrew.py` are CrewAI agents wired to Exa, arXiv, Semantic Scholar, GDELT, and NewsAPI through an MCP server, with Weave tracking on the CrewAI runs.
-- **Privacy** — `backend/tools/chaap_anonymize.py` is a regex-based obfuscator that scrubs PII before a query touches any external API or model.
+- **Privacy experiment** — `backend/tools/chaap_anonymize.py` replaces several common PII patterns. Coverage is limited, and it is not consistently applied before external calls (see the note above).
 - **Frontend** — `browser/` is an Electron app (`main.js`, `preload.js`) talking to the Flask backend (`backend/src/app.py`) over REST.
+
+## Running the prototype
+
+The Electron shell can be started from `browser/` with `npm install` followed by `npm start`. Search actions expect the Python API at `http://127.0.0.1:5000`; the API in turn depends on configured Neo4j, API credentials, and a Hugging Face model that downloads on first use. The repository does not include a one-command full-stack setup. Configuration names used by the backend include `NEO4J_API_URL`, `NEO4J_USER`, `NEO4J_PASSWORD`, `OPENAI_API_KEY`, `EXA_API_KEY`, `NEWS_API_KEY`, `S2_API_KEY`, and `SERPAPI_API_KEY`.
+
+`browser/fake_backend/` is a separate mock service on port 3001 with a different endpoint. The current Electron client calls the Flask API on port 5000, so the mock service does not power its search flow.
 
 ## Prototype
 
-`prototype/crew_routing.py` draws a concept sketch of the shipped routing architecture — no invented numbers, just the pipeline as built: a browsing signal (history, current tabs, queries) passes through the CHAAP PII obfuscation layer, then feeds both the Neo4j memory graph and the zero-shot intent classifier, which together settle on an intent (research / study / shop / doomscroll). That intent picks a matching CrewAI crew, which pulls from arXiv, Semantic Scholar, Exa, GDELT, and NewsAPI, and lands on an assist action (surface papers, quiz, block-the-feed nudge).
+`prototype/crew_routing.py` draws a concept sketch of the intended routing architecture — no invented numbers, just boxes and arrows. The backend code classifies query text, consults the memory graph, and routes Research or News intents to crews. The diagram is illustrative; not every depicted signal or assist action is implemented end to end.
 
-Run it locally to regenerate the figure:
+The diagram needs Python and Matplotlib. Run it from the repository root:
 ```
-MPLCONFIGDIR=/home/arya/projects/hackathons/.mplcache /home/arya/projects/hackathons/.venv/bin/python prototype/crew_routing.py
+python -m pip install matplotlib
+python prototype/crew_routing.py
 ```
 
 ![Gyrus routing: from a browsing signal to an assist action](https://vircgxpcwyvniemqmdyi.supabase.co/storage/v1/object/public/media/writing/Gyrus/crew_routing.png)

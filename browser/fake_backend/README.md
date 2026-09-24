@@ -1,76 +1,17 @@
-# Fake Backend Server
+# Gyrus mock search service
 
-This is a simple Express.js server that simulates a backend API for the browser application. It accepts queries and returns 5 fake search result links.
+This small Express service is a standalone mock. It returns five generated links for a query; it does not call the project's research/news services or use the memory graph.
 
-## Setup
+From this directory:
 
-1. Navigate to the fake_backend directory:
-   ```bash
-   cd browser/fake_backend
-   ```
-
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Start the server:
-   ```bash
-   npm start
-   ```
-
-   Or for development with auto-restart:
-   ```bash
-   npm run dev
-   ```
-
-The server will start on `http://localhost:3001`
-
-## API Endpoints
-
-### POST /api/query
-Accepts a query and returns 5 fake search result links.
-
-**Request:**
-```json
-{
-  "query": "your search query here"
-}
+```sh
+npm install
+npm start
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "query": "your search query here",
-  "links": [
-    {
-      "url": "https://www.google.com/search?q=your%20search%20query%20here",
-      "title": "your search query here - Search Results",
-      "description": "Search result 1 for \"your search query here\""
-    },
-    // ... 4 more links
-  ],
-  "timestamp": "2024-01-01T12:00:00.000Z"
-}
-```
+It listens on `http://localhost:3001` and exposes:
 
-### GET /api/health
-Health check endpoint to verify the server is running.
+- `POST /api/query` with a JSON body such as `{"query":"javascript tutorial"}`
+- `GET /api/health`
 
-**Response:**
-```json
-{
-  "status": "ok",
-  "message": "Fake backend server is running",
-  "timestamp": "2024-01-01T12:00:00.000Z"
-}
-```
-
-## Integration with Browser
-
-The browser application is configured to call this backend when a query is submitted. The backend will return 5 links, and the browser will automatically create 5 tabs, one for each link.
-
-## Fallback Behavior
-
-If the backend server is not running or returns an error, the browser will fall back to creating a single tab with a Google search for the query. 
+The current Electron shell uses the Flask endpoint `POST http://127.0.0.1:5000/api/search`, so this mock is not wired into the browser's search flow. The distinction and full backend requirements are described in the [root README](../../README.md).
