@@ -1,10 +1,11 @@
 """
-Explanatory diagram of Gyrus's shipped routing architecture: how a browsing
+Explanatory diagram of Gyrus's intended routing architecture: how a browsing
 signal turns into an intent, and how that intent picks a crew and a set of
 assist actions.
 
 This is a concept sketch, not a measurement -- there is no benchmark data
-behind it, just the pipeline as built (see backend/src/fivedvector.py,
+behind it. It combines implemented routing with planned assist actions (see
+backend/src/fivedvector.py,
 backend/tools/chaap_anonymize.py, backend/src/query_orch.py,
 backend/MCP/newscrew_http.py, researchcrew.py).
 
