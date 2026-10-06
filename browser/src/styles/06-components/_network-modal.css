@@ -1,8 +1,8 @@
 /* -------------------------------------------------------------------------- */
 /*                     06-components/_network-modal.css                       */
 /*   Memory: "What Gyrus remembers", the d3 graph drawn in app.js.            */
-/*   Ink on paper. Node type is shown by shape and weight; blue marks only    */
-/*   the node the user selected.                                              */
+/*   Node type is shown by shape and weight in text colours; the accent       */
+/*   marks only the node the user selected.                                   */
 /* -------------------------------------------------------------------------- */
 
 .network-modal {
@@ -19,7 +19,7 @@
 .network-modal__overlay {
   position: absolute;
   inset: 0;
-  background-color: color-mix(in srgb, var(--color-ground) 80%, transparent);
+  background-color: rgba(0, 0, 0, 0.25);
 }
 
 .network-modal__content {
@@ -38,7 +38,6 @@
   justify-content: space-between;
   gap: var(--space-4);
   padding: var(--space-4) var(--space-5);
-  border-bottom: var(--border-hairline);
 }
 
 .network-modal__heading {
@@ -49,8 +48,8 @@
 
 .network-modal__title {
   margin: 0;
-  font-size: var(--font-size-title);
-  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-display);
+  font-weight: var(--font-weight-bold);
   line-height: var(--line-height-tight);
 }
 
@@ -71,7 +70,10 @@
   position: relative;
   flex: 1;
   min-height: 0;
+  margin: 0 var(--space-5);
+  border-radius: var(--radius-button);
   background-color: var(--color-ground);
+  overflow: hidden;
 }
 
 .network-graph__container {
@@ -99,7 +101,8 @@
 }
 
 .network-graph__empty strong {
-  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-semibold);
   color: var(--color-ink);
 }
 
@@ -108,8 +111,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
-  padding: var(--space-3) var(--space-5);
-  border-top: var(--border-hairline);
+  padding: var(--space-3) var(--space-5) var(--space-4);
 }
 
 .network-legend {
@@ -139,7 +141,7 @@
 }
 
 .graph-link.is-highlighted {
-  stroke: var(--color-ink);
+  stroke: var(--color-accent);
 }
 
 .graph-node--concept {
@@ -150,7 +152,7 @@
 .graph-node--query {
   fill: var(--color-ground);
   stroke: var(--color-ink);
-  stroke-width: 1.5;
+  stroke-width: 2;
 }
 
 .graph-node--link {
@@ -163,21 +165,21 @@
 }
 
 .graph-node.is-selected {
-  fill: var(--color-blue);
-  stroke: var(--color-blue);
+  fill: var(--color-accent);
+  stroke: var(--color-accent);
 }
 
 .graph-label {
   fill: var(--color-ink-muted);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-caption);
   pointer-events: none;
 }
 
 .graph-label--concept {
   fill: var(--color-ink);
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--font-weight-semibold);
 }
 
 .graph-label.is-selected {
-  fill: var(--color-blue);
+  fill: var(--color-accent);
 }

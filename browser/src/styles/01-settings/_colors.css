@@ -1,56 +1,68 @@
-/* Presentation Identity colour tokens. Light by default, dark via
-   prefers-color-scheme, and :root[data-theme] forces either one.
-   Blue is for technical emphasis only (selected graph node, focus ring).
-   Hot is for warnings only. Muted text is ink mixed down, never a gray. */
+/* Colour, radius and shadow tokens: iOS-native and warm (the Memento look).
+   Light by default, dark via prefers-color-scheme; :root[data-theme] forces
+   either. One accent, amber-orange: primary buttons, active and selected
+   states, line icons, links and focus rings. Nothing else is coloured. */
 :root {
-  --color-ground: #eae4d6;
-  --color-surface: #f2ede2;
-  --color-ink: #282215;
-  --color-hairline: #c6b99f;
-  --color-blue: #3b42db;
-  --color-hot: #e85b30;
+  --color-ground: #f2f2f7;          /* grouped background */
+  --color-elevated: #f2f2f7;        /* sidebars and header */
+  --color-surface: #ffffff;         /* cards and panels */
+  --color-ink: #1c1c1e;             /* primary text */
+  --color-ink-muted: #6e6e73;       /* secondary text */
+  --color-hairline: #e5e5ea;        /* separators */
+  --color-fill: rgba(120, 120, 128, 0.12);   /* inputs, hover */
+  --color-accent: #f09a37;
+  --color-accent-pressed: #d9822b;
+  --color-on-accent: #ffffff;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.08);
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --color-ground: #1c1c1c;
-    --color-surface: #232322;
-    --color-ink: #f1ede4;
-    --color-hairline: #4a4640;
-    --color-blue: #6f76ec;
-    --color-hot: #d95526;
+    --color-ground: #000000;
+    --color-elevated: #1c1c1e;
+    --color-surface: #2c2c2e;
+    --color-ink: #f2f2f7;
+    --color-ink-muted: #98989d;
+    --color-hairline: #38383a;
+    --color-fill: rgba(120, 120, 128, 0.24);
+    --color-accent: #ffa94d;
+    --color-accent-pressed: #f09a37;
+    --color-on-accent: #1c1c1e;
+    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.3);
     color-scheme: dark;
   }
 }
 
 :root[data-theme="dark"] {
-  --color-ground: #1c1c1c;
-  --color-surface: #232322;
-  --color-ink: #f1ede4;
-  --color-hairline: #4a4640;
-  --color-blue: #6f76ec;
-  --color-hot: #d95526;
+  --color-ground: #000000;
+  --color-elevated: #1c1c1e;
+  --color-surface: #2c2c2e;
+  --color-ink: #f2f2f7;
+  --color-ink-muted: #98989d;
+  --color-hairline: #38383a;
+  --color-fill: rgba(120, 120, 128, 0.24);
+  --color-accent: #ffa94d;
+  --color-accent-pressed: #f09a37;
+  --color-on-accent: #1c1c1e;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.3);
   color-scheme: dark;
 }
 
 :root {
   /* Derived. Declared on :root so they follow the theme overrides above. */
-  --color-ink-muted: color-mix(in srgb, var(--color-ink) 60%, transparent);
-  --color-ink-faint: color-mix(in srgb, var(--color-ink) 45%, transparent);
-  --color-ink-wash: color-mix(in srgb, var(--color-ink) 6%, transparent);
+  --color-ink-faint: color-mix(in srgb, var(--color-ink-muted) 70%, transparent);  /* placeholders */
+  --color-accent-wash: color-mix(in srgb, var(--color-accent) 16%, transparent);   /* selected rows */
   --border-hairline: 1px solid var(--color-hairline);
-  --border-ink: 1px solid var(--color-ink);
-  --radius: 0;
-}
 
-/* Aliases read by the About panel (_about-panel.css, owned separately), so it
-   follows the same theme, including :root[data-theme] overrides. */
-:root {
-  --pi-ground: var(--color-ground);
-  --pi-surface: var(--color-surface);
-  --pi-ink: var(--color-ink);
-  --pi-hairline: var(--color-hairline);
-  --pi-blue: var(--color-blue);
-  --pi-hot: var(--color-hot);
+  /* Shapes. */
+  --radius-card: 16px;
+  --radius-button: 12px;
+  --radius-input: 14px;
+  --radius-pill: 999px;
+  --radius-hero: 24px;
+  --radius-small: 4px;
+
+  /* Hero mark (start page and About panel only). */
+  --hero-gradient: linear-gradient(135deg, #b9a7f5 0%, #f28b82 55%, #f6b26b 100%);
 }

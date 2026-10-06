@@ -1,9 +1,9 @@
 :root {
-  /* Hovers are quick; panels (sidebars, header, page area) move on one curve. */
-  --duration-hover: 150ms;
-  --duration-panel: 340ms;
-  --ease-hover: ease;
-  --ease-panel: cubic-bezier(0.32, 0.72, 0, 1);
+  /* Gentle iOS-like ease-out. Nothing bounces; nothing runs past 300ms. */
+  --duration-hover: 200ms;
+  --duration-panel: 280ms;
+  --ease-hover: ease-out;
+  --ease-panel: cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {

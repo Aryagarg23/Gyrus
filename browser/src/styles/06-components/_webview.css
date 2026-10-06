@@ -24,7 +24,7 @@
   align-items: center;
   padding: 0 var(--space-4);
   border-bottom: var(--border-hairline);
-  background-color: var(--color-ground);
+  background-color: var(--color-elevated);
   white-space: nowrap;
 }
 
@@ -42,7 +42,9 @@
   position: absolute;
   inset: 0;
   width: 100%;
-  height: auto;
+  /* explicit: an <iframe> is a replaced element, so inset alone leaves it at
+     its intrinsic 150px height */
+  height: 100%;
   border: none;
   background-color: var(--color-ground);
 }
@@ -50,6 +52,7 @@
 .webview-container.has-status .browser-webview,
 .webview-container.has-status .page-preview {
   top: var(--page-status-height);
+  height: calc(100% - var(--page-status-height));
 }
 
 .webview-loading {
@@ -77,19 +80,17 @@
 .page-preview__card {
   max-width: var(--width-measure);
   margin: 0 auto;
+  padding: var(--space-5);
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
 }
 
-.page-preview__origin {
-  margin: 0;
-}
 
 .page-preview__title {
   margin: 0;
   font-size: var(--font-size-display);
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--font-weight-bold);
   line-height: var(--line-height-tight);
   overflow-wrap: anywhere;
 }
@@ -106,6 +107,7 @@
   margin: 0;
   padding-top: var(--space-3);
   border-top: var(--border-hairline);
+  font-size: var(--font-size-title);
   user-select: text;
 }
 
@@ -115,6 +117,6 @@
 
 .page-preview__note {
   margin: var(--space-2) 0 0;
-  font-size: var(--font-size-sm);
-  color: var(--color-ink-faint);
+  font-size: var(--font-size-caption);
+  color: var(--color-ink-muted);
 }

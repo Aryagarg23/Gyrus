@@ -4,9 +4,9 @@ What is on screen, where its markup, style and behaviour live. Design rules and 
 
 ## Start page
 
-A query box (`components/query-input.html`, `_query-input.css`) centred on the page, placeholder "Search, or type a site". Under it, a short intro saying what Gyrus does and where the panels are; it hides once any tab exists (`body.has-tabs`). Enter submits. Over 50 characters (or Shift+Enter) the box becomes a taller editor: Enter adds a line, Ctrl/Cmd+Enter or the Search button submits, Esc leaves it. Typing `@` lists shortcuts (`@google words`, `@duplicate`, `@close`, ...).
+The hero tile and a large "Gyrus" title, then a white pill search box (`components/query-input.html`, `_query-input.css`), placeholder "Search, or type a site". Under it, a short intro saying what Gyrus does and where the panels are; the hero and intro hide once any tab exists (`body.has-tabs`). Enter submits. Over 50 characters (or Shift+Enter) the box becomes a taller editor: Enter adds a line, Ctrl/Cmd+Enter or the Search button submits, Esc leaves it. Typing `@` lists shortcuts (`@google words`, `@duplicate`, `@close`, ...).
 
-After a search the box collapses into a "Search" button bottom-right that brings it back.
+After a search the box collapses into an orange "Search" button bottom-right that brings it back.
 
 ## Edges
 
@@ -14,7 +14,7 @@ The header and both sidebars are hidden until the pointer reaches an edge (`app.
 
 - Top or left edge: the header (address bar, back, forward, start page, Memory, menu, window buttons) and the **Tasks** panel open together.
 - Right edge: the **Tabs** panel.
-- Thin labelled tabs "Tasks" and "Tabs" sit on the left and right edges (`_edge-tabs.css`). Hover, click or keyboard focus opens the panel. Esc closes open panels. The menu's "Keep the panels open" pins them.
+- Small labelled handles "Tasks" and "Tabs" sit on the left and right edges (`_edge-tabs.css`). Hover, click or keyboard focus opens the panel. Esc closes open panels. The menu's "Keep the panels open" pins them.
 
 When a panel opens, the page area moves aside on the panel curve instead of sitting under it (`updateWebviewPosition`).
 
@@ -22,7 +22,7 @@ When a panel opens, the page area moves aside on the panel curve instead of sitt
 
 - **General** is permanent and holds everyday searches (Answer, Navigational, Transactional), typed addresses and `@` searches.
 - A Research or News search creates its own task with one tab per source the crew returned. Each row shows the task's kind as a label and its tab count.
-- Tasks and tabs are `.row`s (focusable; Enter opens). Closing the last tab anywhere returns to the start page.
+- Tasks and tabs are `.row`s in a white card, iOS grouped-table style (focusable; Enter opens). The selected one gets an orange wash and bar. Closing the last tab anywhere returns to the start page.
 
 ## Page area
 
@@ -30,15 +30,19 @@ When a panel opens, the page area moves aside on the panel curve instead of sitt
 
 - A one-line status above the page says how the tab got there, from the API's intent, e.g. "Research: the research crew found 2 sources" or "Answer: opened a normal search".
 - In Electron the page is a `<webview>`.
-- In a plain browser (`js/platform.js`) the webview becomes an `<iframe>`. Same-origin pages (such as `lobotomy.html`) load in it. External pages are not framed (most sites refuse): a preview card shows the title, address, snippet, where it came from, and an "Open in a new tab" button.
+- In a plain browser (`js/platform.js`) the webview becomes an `<iframe>`. Same-origin pages (such as `lobotomy.html`) load in it. External pages are not framed (most sites refuse): a preview card shows the title, address, snippet, where it came from, and an orange "Open in a new tab" button, on a white card.
 
 ## Memory
 
-The graph button in the header (or the menu) opens "What Gyrus remembers" (`components/network-modal.html`, `_network-modal.css`, `app.js updateNetworkGraph`, d3). Topics are filled squares, searches open circles, links small dots, ink on paper. Clicking an item turns it blue and darkens its edges. Esc or the close button closes it.
+The graph button in the header (or the menu) opens "What Gyrus remembers" (`components/network-modal.html`, `_network-modal.css`, `app.js updateNetworkGraph`, d3). Topics are filled squares, searches open circles, links small dots, in text colours. Clicking an item turns it and its edges orange. Esc or the close button closes it.
 
 ## Menu
 
 The header menu button opens a small dropdown (`_menu-button.css`): keep the panels open, Memory, New search, and About Gyrus (shown when `js/easter-eggs.js` has loaded).
+
+## About
+
+"About Gyrus" (`js/easter-eggs.js`, `components/about-panel.html`, `_about-panel.css`) is a grouped-card sheet with the hero tile in its header.
 
 ## Demo mode
 

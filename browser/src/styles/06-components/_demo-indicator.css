@@ -1,20 +1,37 @@
-/* Bottom-left note shown while no backend is running (js/api.js). Leaves
-   room on the right for the collapsed Search button. */
+/* Note while no backend is running (js/api.js): one compact line in the
+   bottom-left corner. Short enough that it does not reach the intro text
+   or the collapsed Search button on the right. */
 .demo-indicator {
   position: fixed;
   left: var(--space-4);
   bottom: var(--space-4);
   z-index: 1900;
-  max-width: calc(100vw - var(--space-7) * 3);
-  padding: var(--space-1) var(--space-2);
-  border: var(--border-hairline);
-  background-color: var(--color-ground);
-  font-size: var(--font-size-sm);
+  max-width: min(22rem, calc(100vw - var(--space-7) * 3));
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  font-size: var(--font-size-caption);
   color: var(--color-ink-muted);
   pointer-events: none;
 }
 
 .demo-indicator .label {
   margin-right: var(--space-1);
+  font-size: inherit;
   color: var(--color-ink);
+}
+
+/* On the start screen the intro carries the demo note (components/query-input.html). */
+body:not(.has-tabs) .demo-indicator {
+  display: none;
+}
+.query-intro__demo {
+  display: none;
+}
+.is-demo .query-intro__demo {
+  display: block;
 }

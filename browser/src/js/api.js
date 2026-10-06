@@ -48,10 +48,13 @@
       const label = document.createElement('span');
       label.className = 'label';
       label.textContent = 'Demo mode.';
-      el.append(label, ' No backend running, so the crews return search links instead of results.');
+      el.append(label, ' Crews return search links.');
+      el.title = 'No backend is running, so the crews return search links instead of results.';
       document.body.appendChild(el);
     }
     el.hidden = false;
+    // The start screen says this inside its intro; the corner pill is for when pages are open.
+    document.documentElement.classList.add('is-demo');
   }
 
   // ---------------------------------------------------------------------------

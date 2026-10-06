@@ -1,5 +1,5 @@
-/* Dropdown opened by the header menu button (an .icon-button). Appended to
-   <body> by app.js because the header clips its overflow. */
+/* Dropdown opened by the header menu button. Appended to <body> by app.js
+   because the header clips its overflow. Items are .rows in a .panel. */
 .menu-dropdown {
   position: fixed;
   z-index: 3000;
@@ -10,16 +10,4 @@
 
 .menu-dropdown.is-open {
   display: flex;
-}
-
-.menu-dropdown .button--text {
-  border-bottom: var(--border-hairline);
-}
-
-.menu-dropdown .button--text:last-child {
-  border-bottom: none;
-}
-
-.menu-dropdown .button--text:focus-visible {
-  outline-offset: -2px;
 }

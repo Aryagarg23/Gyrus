@@ -1,6 +1,6 @@
-/* Thin labelled tabs on the left and right edges so newcomers can find the
-   hidden panels. Hover, click or keyboard focus opens the panel; the tab fades
-   while its panel is open (body.tasks-open / body.tabs-open, set by app.js). */
+/* Small labelled handles on the left and right edges so newcomers can find
+   the hidden panels. Hover, click or keyboard focus opens the panel; the
+   handle fades while its panel is open (body.tasks-open / body.tabs-open). */
 .edge-tab {
   position: fixed;
   top: calc(50% - var(--edge-tab-height) / 2);
@@ -11,34 +11,31 @@
   width: var(--edge-tab-width);
   height: var(--edge-tab-height);
   padding: 0;
-  border: var(--border-hairline);
-  background-color: var(--color-ground);
+  border: none;
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-card);
   color: var(--color-ink-muted);
-  font-size: var(--font-size-label);
-  font-weight: var(--font-weight-medium);
-  letter-spacing: var(--letter-spacing-label);
-  text-transform: uppercase;
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
   writing-mode: vertical-rl;
   cursor: pointer;
   transition:
     opacity var(--duration-panel) var(--ease-panel),
-    background-color var(--duration-hover) var(--ease-hover),
     color var(--duration-hover) var(--ease-hover);
 }
 
 .edge-tab:hover {
-  background-color: var(--color-ink);
-  color: var(--color-ground);
+  color: var(--color-accent);
 }
 
 .edge-tab--left {
   left: 0;
-  border-left: none;
+  border-radius: 0 var(--radius-button) var(--radius-button) 0;
 }
 
 .edge-tab--right {
   right: 0;
-  border-right: none;
+  border-radius: var(--radius-button) 0 0 var(--radius-button);
 }
 
 body.tasks-open .edge-tab--left,

@@ -2,55 +2,66 @@
 /*                       06-components/_query-input.css                       */
 /* -------------------------------------------------------------------------- */
 
-/* The query box: a panel with a hairline, centred on the start page. */
+/* Start page hero: tile, large title. Hidden once a page is open. */
+.query-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-2);
+}
+
+.query-hero__title {
+  margin: 0;
+  font-size: var(--font-size-display);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+}
+
+/* The search box: a white pill with the card shadow. */
 .query-input-container {
   position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  width: min(var(--width-measure), 100%);
-  padding: var(--space-4) var(--space-5);
+  /* leave room for the Tasks / Tabs edge tabs on both sides */
+  width: min(var(--width-measure), calc(100% - 2 * (var(--edge-tab-width) + var(--space-3))));
+  min-height: var(--button-height);
+  padding: var(--space-3) var(--space-5);
   background-color: var(--color-surface);
-  border: var(--border-hairline);
-  transition: border-color var(--duration-hover) var(--ease-hover);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-card);
+  transition: box-shadow var(--duration-hover) var(--ease-hover);
 }
 
 .query-input-container:focus-within {
-  border-color: var(--color-ink);
+  box-shadow: var(--shadow-card), 0 0 0 2px var(--color-accent);
 }
 
-/* Brief pressed state while a query is submitted. */
-.query-input-container.is-active {
-  background-color: var(--color-ground);
-}
-
-/* Collapsed: once a page is open, an outline "Search" button bottom-right
-   brings the query box back (same look as .button). */
+/* Collapsed: once a page is open, a primary "Search" pill bottom-right
+   brings the box back. */
 .query-input-container.is-collapsed {
   position: fixed;
   right: var(--space-4);
   bottom: var(--space-4);
   z-index: 2000;
   width: auto;
-  min-height: var(--icon-button-size);
-  padding: 0 var(--space-4);
-  background-color: var(--color-ground);
-  border: var(--border-ink);
+  min-height: var(--button-height);
+  padding: 0 var(--space-5);
+  background-color: var(--color-accent);
+  color: var(--color-on-accent);
   cursor: pointer;
-  transition:
-    background-color var(--duration-hover) var(--ease-hover),
-    color var(--duration-hover) var(--ease-hover);
+  transition: background-color var(--duration-hover) var(--ease-hover);
 }
 
 .query-input-container.is-collapsed::before {
   content: "Search";
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
 }
 
 .query-input-container.is-collapsed:hover {
-  background-color: var(--color-ink);
-  color: var(--color-ground);
+  background-color: var(--color-accent-pressed);
 }
 
 .query-input-container.is-collapsed .query-input__text-area,
@@ -59,7 +70,7 @@
   display: none !important;
 }
 
-/* Editor mode: long queries get a taller box with a Search button. */
+/* Editor mode: long queries get a taller rounded box with a Search button. */
 .query-input-container.is-editor-mode {
   z-index: 2001;
   width: min(var(--width-wide), 100%);
@@ -67,6 +78,7 @@
   flex-direction: column;
   align-items: stretch;
   padding: var(--space-5);
+  border-radius: var(--radius-card);
 }
 
 .query-input-container.is-editor-mode .query-input__text-area {
@@ -89,12 +101,12 @@
   max-height: calc(var(--line-height-base) * 5em);
   overflow-y: auto;
   color: var(--color-ink);
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-title);
   line-height: var(--line-height-base);
 }
 
 .query-input__text-area:focus-visible {
-  outline: none; /* the box border shows focus */
+  outline: none; /* the box shows focus */
 }
 
 .query-input__text-area:empty::before {
@@ -119,28 +131,29 @@
   display: flex;
 }
 
-/* Intro under the query box. Hidden once any tab exists (body.has-tabs). */
+/* Intro under the box. Hidden once any tab exists (body.has-tabs). */
 .query-intro {
   width: min(var(--width-measure), 100%);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  padding: 0 var(--space-5);
+  text-align: center;
 }
 
 .query-intro p {
   margin: 0;
-}
-
-.query-intro__what {
   font-size: var(--font-size-sm);
   color: var(--color-ink-muted);
 }
 
-body.has-tabs .query-intro {
+body.has-tabs .query-intro,
+body.has-tabs .query-hero {
   display: none;
 }
 
 .query-input__autocomplete {
-  left: -1px;
-  right: -1px;
+  left: 0;
+  right: 0;
+  margin-top: var(--space-2);
 }

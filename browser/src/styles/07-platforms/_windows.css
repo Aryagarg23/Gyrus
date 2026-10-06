@@ -17,28 +17,21 @@
   flex: 0 0 auto;
 }
 
-/* Window buttons: a row of icon-button cells. */
+/* Window buttons: quiet icon buttons. */
 .platform-windows .window-controls {
   margin-left: var(--space-3);
-  border: var(--border-hairline);
+  gap: var(--space-1);
 }
 
 .platform-windows .window-controls__button {
   width: var(--space-7);
-  color: var(--color-ink);
-  border-left: var(--border-hairline);
-  transition:
-    background-color var(--duration-hover) var(--ease-hover),
-    color var(--duration-hover) var(--ease-hover);
-}
-
-.platform-windows .window-controls__button:first-child {
-  border-left: none;
+  border-radius: var(--radius-button);
+  color: var(--color-ink-muted);
+  transition: background-color var(--duration-hover) var(--ease-hover);
 }
 
 .platform-windows .window-controls__button:hover {
-  background-color: var(--color-ink);
-  color: var(--color-ground);
+  background-color: var(--color-fill);
 }
 
 .platform-windows .window-controls__button::before {

@@ -47,7 +47,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--font-size-label);
+  font-size: var(--font-size-caption);
   line-height: 1;
   color: rgba(0, 0, 0, 0.5);
   opacity: 0;

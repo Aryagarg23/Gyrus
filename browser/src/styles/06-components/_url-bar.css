@@ -1,4 +1,4 @@
-/* Address bar in the header. Header icon buttons use .icon-button (_controls.css). */
+/* Address bar in the header. Header buttons are .icon-buttons (_controls.css). */
 #url-bar-container {
   flex: 1 1 auto;
   min-width: 0;
@@ -16,20 +16,21 @@
   width: 100%;
   height: var(--header-element-content-height);
   padding: 0 var(--space-3);
-  border: var(--border-hairline);
-  background-color: var(--color-surface);
+  border: none;
+  border-radius: var(--radius-input);
+  background-color: var(--color-fill);
   color: var(--color-ink);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
+  text-align: center;
   cursor: text;
-  transition: border-color var(--duration-hover) var(--ease-hover);
+}
+
+.url-bar__input:focus {
+  text-align: left;
 }
 
 .url-bar__input::placeholder {
   color: var(--color-ink-faint);
-}
-
-.url-bar__input:focus {
-  border-color: var(--color-ink);
 }
 
 .nav-controls-container {

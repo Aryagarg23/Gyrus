@@ -62,8 +62,7 @@
     el.setAttribute('role', 'region');
     el.setAttribute('aria-label', 'Page preview');
     el.innerHTML =
-      '<div class="page-preview__card">' +
-      '<p class="page-preview__origin label"></p>' +
+      '<div class="page-preview__card panel">' +
       '<h1 class="page-preview__title"></h1>' +
       '<p class="page-preview__url"></p>' +
       '<p class="page-preview__snippet"></p>' +
@@ -94,7 +93,7 @@
 
   function fillPreview(el, url) {
     const info = describe(url);
-    el.querySelector('.page-preview__origin').textContent = info.origin;
+    // The page status bar above already says where this page came from.
     el.querySelector('.page-preview__title').textContent = info.title;
     el.querySelector('.page-preview__url').textContent = url;
     const snippet = el.querySelector('.page-preview__snippet');

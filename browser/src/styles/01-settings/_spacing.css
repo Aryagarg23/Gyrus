@@ -15,10 +15,12 @@
   --sidebar-width: 200px;
   --row-height: 44px;                      /* every task and tab row */
   --icon-button-size: 32px;
+  --button-height: 44px;                   /* primary buttons */
   --icon-button-size-sm: 24px;
   --icon-size: 16px;
   --page-status-height: 32px;
   --edge-tab-width: 24px;
+  --hero-size: 96px;
   --edge-tab-height: 72px;
   --edge-hover-zone: 5px;                  /* app.js EDGE_PX */
 

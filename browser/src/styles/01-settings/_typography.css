@@ -1,16 +1,17 @@
-/* One type scale. Every font-size in the shell is one of these five. */
+/* System UI type. Weights 400 / 600 / 700. Five sizes, used everywhere. */
 :root {
-  --font-family-primary: 'Space Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-family-primary: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', system-ui, sans-serif;
+  --font-family-mono: ui-monospace, 'SF Mono', Menlo, monospace;
   --font-weight-regular: 400;
-  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
 
-  --font-size-label: 0.65rem;    /* uppercase labels */
-  --font-size-sm: 0.8rem;        /* small text, rows, buttons */
-  --font-size-base: 0.9rem;      /* body */
-  --font-size-title: 1.1rem;     /* panel and modal titles, editor text */
-  --font-size-display: 1.6rem;   /* preview card title */
+  --font-size-caption: 0.75rem;     /* 12px: captions, counts */
+  --font-size-sm: 0.8125rem;        /* 13px: secondary text, rows' meta */
+  --font-size-base: 0.9375rem;      /* 15px: body, rows, buttons */
+  --font-size-title: 1.0625rem;     /* 17px: headlines, panel titles */
+  --font-size-display: 1.75rem;     /* 28px: large titles */
 
-  --line-height-base: 1.5;
+  --line-height-base: 1.45;
   --line-height-tight: 1.2;
-  --letter-spacing-label: 0.14em;
 }

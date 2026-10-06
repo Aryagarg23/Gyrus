@@ -1,7 +1,7 @@
 /* -------------------------------------------------------------------------- */
 /*   06-components/_sidebar.css: the two edge panels.                         */
-/*   Left = Tasks, right = Tabs. Both use .panel colours and .row rows        */
-/*   (_controls.css); this file only handles the slide and the headers.       */
+/*   Left = Tasks, right = Tabs. Each holds a .card of .rows (iOS grouped     */
+/*   table, see _controls.css); this file handles the slide and headers.      */
 /* -------------------------------------------------------------------------- */
 
 .sidebar,
@@ -12,7 +12,7 @@
   width: 0;
   overflow: hidden;
   opacity: 0;
-  background-color: var(--color-surface);
+  background-color: var(--color-elevated);
   border: 0 solid var(--color-hairline);
   transition:
     width var(--duration-panel) var(--ease-panel),
@@ -43,7 +43,7 @@
   flex-direction: column;
   width: var(--sidebar-width);
   height: 100%;
-  padding-top: var(--space-4);
+  padding: var(--space-4) var(--space-3);
 }
 
 .sidebar__header,
@@ -51,51 +51,43 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: var(--icon-button-size-sm);
-  padding: 0 var(--space-4);
+  min-height: var(--icon-button-size);
+  padding: 0 var(--space-1);
   margin-bottom: var(--space-3);
 }
 
 .sidebar__title,
 .right-sidebar__title {
   margin: 0;
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-bold);
 }
 
+/* The list is a card; the card scrolls when it is taller than the panel. */
 .sidebar__tab-list,
 .right-sidebar__tab-list {
-  flex: 1;
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
-  border-top: var(--border-hairline);
 }
 
-/* In the tab list the last row keeps its rule, so the list has an end. */
-.sidebar__tab-list .row:last-child,
-.right-sidebar__tab-list .row:last-child {
-  border-bottom: var(--border-hairline);
-}
-
-/* Tabs panel: "Open a site" input. */
+/* Tabs panel: "Open a site" field. */
 .right-sidebar__new-tab-input {
   position: relative;
-  padding: 0 var(--space-4);
   margin-bottom: var(--space-3);
 }
 
 .right-sidebar__url-input {
   width: 100%;
   height: var(--icon-button-size);
-  padding: 0 var(--space-2);
-  border: var(--border-hairline);
-  background-color: var(--color-ground);
+  padding: 0 var(--space-3);
+  border: none;
+  border-radius: var(--radius-input);
+  background-color: var(--color-fill);
   color: var(--color-ink);
-  font-size: var(--font-size-sm);
-  transition: border-color var(--duration-hover) var(--ease-hover);
-}
-
-.right-sidebar__url-input:focus {
-  border-color: var(--color-ink);
+  font-size: var(--font-size-base);
 }
 
 .right-sidebar__url-input::placeholder {
@@ -110,10 +102,10 @@
   display: none;
   max-height: var(--height-list-max);
   overflow-y: auto;
-  margin-top: -1px;
 }
 
 .right-sidebar__autocomplete {
-  left: var(--space-4);
-  right: var(--space-4);
+  left: 0;
+  right: 0;
+  margin-top: var(--space-1);
 }

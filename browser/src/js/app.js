@@ -104,7 +104,7 @@ const LLM_CHAT_NAMES = new Set([
   'contentbot', 'peppertype'
 ]);
 
-// Line icons: 16px, 1.5 stroke, currentColor (see .icon in _controls.css).
+// Line icons: 16px, 2px round stroke, currentColor (see .icon in _controls.css).
 const ICON_CLOSE = '<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>';
 
 function escapeHtml(text) {
@@ -551,7 +551,7 @@ class App {
         ${meta ? `<span class="row__meta label">${escapeHtml(meta)}</span>` : ''}
       </span>
       ${count !== undefined ? `<span class="row__count" title="Tabs in this task">${count}</span>` : ''}
-      ${closeLabel ? `<button class="icon-button icon-button--sm row__close" type="button" title="${closeLabel}" aria-label="${closeLabel}">${ICON_CLOSE}</button>` : ''}
+      ${closeLabel ? `<button class="icon-button icon-button--sm icon-button--quiet row__close" type="button" title="${closeLabel}" aria-label="${closeLabel}">${ICON_CLOSE}</button>` : ''}
     `;
     row.addEventListener('click', (e) => {
       if (!e.target.closest('.row__close')) onOpen();
@@ -811,7 +811,7 @@ class App {
 
       // Team joke: asking for a chatbot gets you the lobotomy page.
       if (this.isLLMProvider(query)) {
-        const lobotomyUrl = this.getLobotomyUrl();
+        const lobotomyUrl = this.getLobotomyUrl(query);
         const origin = 'You asked for an AI chat site';
         if (this.isGeneralTaskActive) {
           this.createTabInGeneralTask(lobotomyUrl, LOBOTOMY_TITLE, '', origin);
@@ -1002,7 +1002,7 @@ class App {
       items().filter((item) => !item.hidden).forEach((item) => {
         const button = document.createElement('button');
         button.type = 'button';
-        button.className = 'button button--text';
+        button.className = 'row';
         button.setAttribute('role', 'menuitem');
         button.textContent = item.label;
         button.addEventListener('click', (e) => {
@@ -1251,8 +1251,8 @@ class App {
 
     if (!webview || !webviewContainer) return;
 
-    const showLobotomy = () => {
-      const lobotomyUrl = this.getLobotomyUrl();
+    const showLobotomy = (destination) => {
+      const lobotomyUrl = this.getLobotomyUrl(destination);
       webview.src = lobotomyUrl;
       const tab = this.tabs[this.activeTabIndex];
       if (tab) {
@@ -1294,9 +1294,9 @@ class App {
 
       if (this.isLLMProvider(typed)) {
         if (this.tabs.length === 0) {
-          this.createTabInGeneralTask(this.getLobotomyUrl(), LOBOTOMY_TITLE, '', 'You asked for an AI chat site');
+          this.createTabInGeneralTask(this.getLobotomyUrl(typed), LOBOTOMY_TITLE, '', 'You asked for an AI chat site');
         } else {
-          showLobotomy();
+          showLobotomy(typed);
         }
         this.activateWebview();
         return;
@@ -1337,7 +1337,7 @@ class App {
       if (urlBarInput) urlBarInput.value = e.url;
       const tab = this.tabs[this.activeTabIndex];
       if (tab) tab.url = e.url;
-      if (this.isLLMProvider(e.url)) showLobotomy();
+      if (this.isLLMProvider(e.url)) showLobotomy(e.url);
     });
 
     webview.addEventListener('did-navigate-in-page', (e) => {
@@ -1640,8 +1640,18 @@ class App {
 
   // lobotomy.html sits next to index.html, so it is same-origin and loads in
   // the page area in both Electron and a plain browser.
-  getLobotomyUrl() {
-    return new URL('lobotomy.html', window.location.href).href;
+  // The lobotomy page offers "Proceed with lobotomy" when it knows where you
+  // were going, so pass the destination along as ?to= (http/https only).
+  getLobotomyUrl(destination = '') {
+    const page = new URL('lobotomy.html', window.location.href);
+    const raw = String(destination || '').trim();
+    if (raw && !/\s/.test(raw)) {
+      try {
+        const target = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
+        if (target.hostname.includes('.')) page.searchParams.set('to', target.href);
+      } catch (_) { /* not a URL: no way through */ }
+    }
+    return page.href;
   }
 
   // Input from the tabs panel and the query box's "@..." / address path.
@@ -1705,7 +1715,7 @@ class App {
 
       this.switchToGeneralTask();
       if (this.isLLMProvider(argument) || this.isLLMProvider(url)) {
-        this.createTabInGeneralTask(this.getLobotomyUrl(), LOBOTOMY_TITLE, '', 'You asked for an AI chat site');
+        this.createTabInGeneralTask(this.getLobotomyUrl(url), LOBOTOMY_TITLE, '', 'You asked for an AI chat site');
         return;
       }
       this.createTabInGeneralTask(url, title, '',
@@ -1723,7 +1733,7 @@ class App {
 
     this.switchToGeneralTask();
     if (this.isLLMProvider(url)) {
-      this.createTabInGeneralTask(this.getLobotomyUrl(), LOBOTOMY_TITLE, '', 'You asked for an AI chat site');
+      this.createTabInGeneralTask(this.getLobotomyUrl(url), LOBOTOMY_TITLE, '', 'You asked for an AI chat site');
       return;
     }
     this.createTabInGeneralTask(url, input, '', 'Opened the address you typed');
@@ -1817,6 +1827,10 @@ class App {
     // The collapsed "Search" button is a real control: focusable, Enter/Space open it.
     const expand = (e) => {
       if (!queryInputContainer.classList.contains('is-collapsed')) return;
+      // Only the collapsed button itself. The Enter that submits a search
+      // bubbles up from the text area after the box has already collapsed,
+      // and must not reopen it.
+      if (e.target !== queryInputContainer) return;
       e.preventDefault();
       e.stopPropagation();
       this.openQueryInput();

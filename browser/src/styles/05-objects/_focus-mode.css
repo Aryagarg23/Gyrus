@@ -1,9 +1,9 @@
-/* Overlay behind the query box in editor mode (long queries). Flat wash, no blur. */
+/* Dim layer behind the query box in editor mode (long queries). */
 .focus-overlay {
   position: fixed;
   inset: 0;
   z-index: 1500;
-  background-color: color-mix(in srgb, var(--color-ground) 85%, transparent);
+  background-color: rgba(0, 0, 0, 0.2);
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--duration-panel) var(--ease-panel);
