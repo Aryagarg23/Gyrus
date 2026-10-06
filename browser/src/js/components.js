@@ -114,6 +114,11 @@ class ComponentManager {
 
     // Setup platform-specific layout
     this.setupPlatformSpecificLayout();
+
+    // Outside Electron: swap <webview> for an <iframe> shim, hide window buttons
+    if (window.GyrusPlatform) {
+      window.GyrusPlatform.afterComponentsLoaded();
+    }
   }
 }
 

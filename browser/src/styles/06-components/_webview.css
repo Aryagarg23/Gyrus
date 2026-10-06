@@ -65,8 +65,9 @@
   left: 0;
   right: 0;
   bottom: 0;
-  display: flex;
-  flex-direction: column;
+  /* display is owned by 05-objects/_layout.css: hidden until a page is open.
+     Setting it here (this file loads later) kept the page layer over the
+     query box once the unclosed <link> above it in index.html was fixed. */
   background-color: var(--color-base);
   border-radius: 0; /* Remove border radius to fill completely */
   overflow: hidden;

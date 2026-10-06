@@ -148,32 +148,60 @@ def retrieve_all_links_to_concept(concept):
     return(result)
 
 def retrieve_graph():
+    """Return the memory graph as JSON-safe {nodes, links} for the frontend.
+
+    nodes: [{id, name, type}]  id = Neo4j elementId, type = 'concept'|'query'|'link'
+    links: [{source, target, type}]  source/target are node ids, type = relationship type
+
+    Untested against a live Neo4j: written from the schema in this file
+    (Concept.name, Query.content, Link.address). elementId() needs Neo4j 5+.
+    """
     cypher_query = """
     MATCH (n)
     WHERE n:Concept OR n:Query OR n:Link
     OPTIONAL MATCH (n)-[r]->(m)
     WHERE m:Concept OR m:Query OR m:Link
-    RETURN n, r, m
+    RETURN elementId(n) AS n_id, labels(n) AS n_labels,
+           coalesce(n.name, n.content, n.address) AS n_name,
+           type(r) AS r_type,
+           elementId(m) AS m_id, labels(m) AS m_labels,
+           coalesce(m.name, m.content, m.address) AS m_name
     """
     result = run_db_query(cypher_query)
+    if isinstance(result, str):
+        # run_db_query returns an error string instead of raising
+        raise RuntimeError(result)
 
-    nodes = []
-    relationships = []
+    def node_type(labels):
+        for label in ("Concept", "Query", "Link"):
+            if label in (labels or []):
+                return label.lower()
+        return "unknown"
+
+    nodes = {}
+    links = []
+    seen_links = set()
 
     for record in result:
-        n = record["n"]
-        m = record["m"]
-        r = record["r"]
+        for prefix in ("n", "m"):
+            node_id = record.get(f"{prefix}_id")
+            if node_id is not None and node_id not in nodes:
+                nodes[node_id] = {
+                    "id": node_id,
+                    "name": record.get(f"{prefix}_name") or "",
+                    "type": node_type(record.get(f"{prefix}_labels")),
+                }
 
-        nodes.append(n)
-        nodes.append(m)
-        relationships.append(r)
+        r_type = record.get("r_type")
+        source, target = record.get("n_id"), record.get("m_id")
+        if r_type is None or source is None or target is None:
+            continue  # OPTIONAL MATCH found no relationship
+        key = (source, target, r_type)
+        if key not in seen_links:
+            seen_links.add(key)
+            links.append({"source": source, "target": target, "type": r_type})
 
-
-    return {
-        "nodes": list(nodes),
-        "relationships": relationships
-    }
+    return {"nodes": list(nodes.values()), "links": links}
 
 
 

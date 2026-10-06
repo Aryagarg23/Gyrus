@@ -93,13 +93,23 @@ def get_all_links_to_concept():
         return jsonify(links), 200
 
     except Exception as e:
-        jsonify(f'Error: {e}'), 400
+        return jsonify(f'Error: {e}'), 400
 
 @app.route('/api/get-graph', methods=['GET'])
 def get_graph():
-    graph = retrieve_graph()
+    try:
+        graph = retrieve_graph()
+    except Exception as e:
+        return jsonify(f'Error: {e}'), 500
 
     return jsonify(graph), 200
+
+
+@app.route('/api/health', methods=['GET'])
+def health():
+    # Cheap reachability check for the frontend (browser/src/js/api.js).
+    # Says nothing about Neo4j or API keys.
+    return jsonify({'ok': True}), 200
 
 if __name__ == "__main__":
     app.run()

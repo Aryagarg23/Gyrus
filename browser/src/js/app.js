@@ -29,6 +29,13 @@ class App {
     this.waitForComponents();
   }
 
+  // Tabs of whichever task is active (General or a regular task). Tabs live under
+  // tasks; setupWebview's handlers read this.tabs, which was never defined.
+  get tabs() {
+    const task = this.isGeneralTaskActive ? this.generalTask : this.tasks[this.activeTaskIndex];
+    return task ? task.tabs : [];
+  }
+
   async waitForComponents() {
     console.log('waitForComponents started');
     // Wait for sidebar component to be loaded
@@ -259,23 +266,11 @@ class App {
     try {
       console.log('Adding link to backend:', { url, title, snippet, query: this.currentQuery, intent: this.currentIntent });
       
-      const response = await fetch('http://127.0.0.1:5000/api/add-links', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          links: [url],
-          query: this.currentQuery,
-          intent: this.currentIntent
-        })
+      const result = await window.GyrusAPI.addLinks({
+        links: [url],
+        query: this.currentQuery,
+        intent: this.currentIntent
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
       console.log('Backend add-links response:', result);
     } catch (error) {
       console.error('Error calling add-links API:', error);
@@ -1038,8 +1033,10 @@ class App {
         return;
       }
       
-      // Check if query is a direct URL
-      if (query.includes('.com') || query.includes('.org') || query.includes('.net') || query.includes('.ai') || query.startsWith('http')) {
+      // Check if query is a direct URL (no spaces, and a known TLD at the end of the host)
+      const looksLikeUrl = query.startsWith('http') ||
+        (!/\s/.test(query) && /\.(com|org|net|ai)(\/|:|\?|#|$)/i.test(query));
+      if (looksLikeUrl) {
         console.log('🔍 Processing direct URL:', query);
         await this.processUrlInput(query);
         
@@ -1053,20 +1050,8 @@ class App {
       }
       
       try {
-        // Call the fake backend API
-        const response = await fetch('http://127.0.0.1:5000/api/search', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ query: query })
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
+        // Real backend if running, otherwise the demo stand-in (js/api.js)
+        const data = await window.GyrusAPI.searchQuery(query);
         console.log('Backend response:', data);
         
         // Store the current query and intent for future tab creation
@@ -1127,6 +1112,9 @@ class App {
         // Clear the query input
         queryInput_textArea.innerText = '';
         queryInput_textArea.style.height = 'auto';
+
+        // Show the tab we just opened
+        this.activateWebview();
       }
     };
 
@@ -1397,15 +1385,8 @@ class App {
     let links = [];
     
     try {
-      const response = await fetch('http://127.0.0.1:5000/api/get-graph', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
+      const data = await window.GyrusAPI.getGraph();
+      if (data) {
         console.log('Graph API response:', data);
         
         // Process API data to create nodes and links
