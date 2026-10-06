@@ -1,336 +1,343 @@
 // Main application logic
+
+// Panel sizes. Keep in step with --header-element-height and --sidebar-width
+// in styles/01-settings/_spacing.css.
+const HEADER_HEIGHT_PX = 48;
+const SIDEBAR_WIDTH_PX = 200;
+
+// "@name words" shortcuts, shared by the query box and the tabs panel input.
+const SEARCH_ENGINES = [
+  { name: 'google', description: 'Search Google' },
+  { name: 'bing', description: 'Search Bing' },
+  { name: 'youtube', description: 'Search YouTube' },
+  { name: 'github', description: 'Search GitHub' },
+  { name: 'stackoverflow', description: 'Search Stack Overflow' },
+  { name: 'reddit', description: 'Search Reddit' },
+  { name: 'wikipedia', description: 'Search Wikipedia' },
+  { name: 'arxiv', description: 'Search arXiv papers' },
+  { name: 'twitter', description: 'Search Twitter' },
+  { name: 'linkedin', description: 'Search LinkedIn' },
+  { name: 'amazon', description: 'Search Amazon' },
+  { name: 'ebay', description: 'Search eBay' },
+  { name: 'spotify', description: 'Search Spotify' },
+  { name: 'netflix', description: 'Search Netflix' },
+  { name: 'medium', description: 'Search Medium' },
+  { name: 'quora', description: 'Search Quora' },
+  { name: 'discord', description: 'Search Discord' },
+  { name: 'slack', description: 'Search Slack' },
+  { name: 'notion', description: 'Search Notion' },
+  { name: 'figma', description: 'Search Figma' }
+];
+
+// [homepage, (encodedQuery) => search URL] per @engine.
+const ENGINE_URLS = {
+  google: ['https://www.google.com', (q) => `https://www.google.com/search?q=${q}`],
+  bing: ['https://www.bing.com', (q) => `https://www.bing.com/search?q=${q}`],
+  youtube: ['https://www.youtube.com', (q) => `https://www.youtube.com/results?search_query=${q}`],
+  github: ['https://github.com', (q) => `https://github.com/search?q=${q}`],
+  stackoverflow: ['https://stackoverflow.com', (q) => `https://stackoverflow.com/search?q=${q}`],
+  reddit: ['https://www.reddit.com', (q) => `https://www.reddit.com/search/?q=${q}`],
+  wikipedia: ['https://en.wikipedia.org', (q) => `https://en.wikipedia.org/wiki/Special:Search?search=${q}`],
+  arxiv: ['https://arxiv.org', (q) => `https://arxiv.org/search/?query=${q}&searchtype=all&source=header`],
+  twitter: ['https://twitter.com', (q) => `https://twitter.com/search?q=${q}`],
+  linkedin: ['https://www.linkedin.com', (q) => `https://www.linkedin.com/search/results/all/?keywords=${q}`],
+  amazon: ['https://www.amazon.com', (q) => `https://www.amazon.com/s?k=${q}`],
+  ebay: ['https://www.ebay.com', (q) => `https://www.ebay.com/sch/i.html?_nkw=${q}`],
+  spotify: ['https://open.spotify.com', (q) => `https://open.spotify.com/search/${q}`],
+  netflix: ['https://www.netflix.com', (q) => `https://www.netflix.com/search?q=${q}`],
+  medium: ['https://medium.com', (q) => `https://medium.com/search?q=${q}`],
+  quora: ['https://www.quora.com', (q) => `https://www.quora.com/search?q=${q}`],
+  discord: ['https://discord.com', (q) => `https://discord.com/search?q=${q}`],
+  slack: ['https://slack.com', (q) => `https://slack.com/search?q=${q}`],
+  notion: ['https://www.notion.so', (q) => `https://www.notion.so/search?q=${q}`],
+  figma: ['https://www.figma.com', (q) => `https://www.figma.com/search?model_type=files&q=${q}`]
+};
+
+const AT_COMMANDS = [
+  { name: 'duplicate', description: 'Copy a tab' },
+  { name: 'close', description: 'Close this tab' },
+  { name: 'closeall', description: 'Close every tab in this task' },
+  { name: 'newtask', description: 'Start an empty task' },
+  { name: 'closetask', description: 'Close this task' }
+];
+
+// Plain names for the five intents the classifier returns.
+const INTENT_NAMES = {
+  Research: 'Research',
+  News: 'News',
+  Answer: 'Answer',
+  Navigational: 'Finding a site',
+  Transactional: 'Buying something'
+};
+
+const LOBOTOMY_TITLE = 'Self-lobotomy';
+
+// Real chat products. A URL matches when its hostname is one of these or a
+// subdomain of one. Company homepages (openai.com, anthropic.com) are not chat
+// products and are left out on purpose.
+const LLM_CHAT_DOMAINS = [
+  'chat.com',
+  'chatgpt.com',
+  'chat.openai.com',
+  'claude.ai',
+  'gemini.google.com',
+  'bard.google.com',
+  'copilot.microsoft.com',
+  'perplexity.ai',
+  'poe.com',
+  'character.ai',
+  'replika.com',
+  'jasper.ai',
+  'writesonic.com',
+  'copy.ai',
+  'rytr.me',
+  'simplified.co',
+  'contentbot.ai',
+  'peppertype.ai'
+];
+
+// A query that is exactly one of these also counts. Generic words from the old
+// list ("copy", "character", "simplified") are left out: they are real searches.
+const LLM_CHAT_NAMES = new Set([
+  'chatgpt', 'chat gpt', 'openai', 'claude', 'anthropic', 'gemini', 'bard',
+  'copilot', 'perplexity', 'poe', 'replika', 'jasper', 'writesonic', 'rytr',
+  'contentbot', 'peppertype'
+]);
+
+// Line icons: 16px, 1.5 stroke, currentColor (see .icon in _controls.css).
+const ICON_CLOSE = '<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>';
+
+function escapeHtml(text) {
+  return String(text == null ? '' : text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 class App {
   constructor() {
-    console.log('App constructor called');
     this.tasks = [];
     this.activeTaskIndex = 0;
     this.activeTabIndex = 0;
     this.hasActiveWebview = false;
-    
-    // Create the permanent General task for Navigational, Transactional, and Answer queries
+
+    // The permanent General task holds Navigational, Transactional and Answer
+    // searches, typed addresses and @-searches.
     this.generalTask = {
       id: 'general-permanent',
       title: 'General',
-      icon: '🌐',
+      intent: null,
       tabs: [],
       createdAt: new Date(),
-      isGeneralTask: true // Flag to identify this as the general task
+      isGeneralTask: true
     };
-    
-    // Track if General task is active
+
     this.isGeneralTaskActive = true;
-    
-    // Store current query and intent for backend API calls
+
+    // Last search, sent with add-links calls.
     this.currentQuery = null;
     this.currentIntent = null;
-    
+
+    // The preview card (plain browser) asks us what we know about a URL.
+    if (window.GyrusPlatform) {
+      window.GyrusPlatform.describeUrl = (url) => this.describeUrl(url);
+    }
+
     this.initializeEventListeners();
-    // Initialize tasks after components are loaded
     this.waitForComponents();
+  }
+
+  // Whichever task is showing: General or a regular one.
+  get activeTask() {
+    return this.isGeneralTaskActive ? this.generalTask : this.tasks[this.activeTaskIndex];
   }
 
   // Tabs of whichever task is active (General or a regular task). Tabs live under
   // tasks; setupWebview's handlers read this.tabs, which was never defined.
   get tabs() {
-    const task = this.isGeneralTaskActive ? this.generalTask : this.tasks[this.activeTaskIndex];
+    const task = this.activeTask;
     return task ? task.tabs : [];
   }
 
+  // Every task's tabs, General first.
+  allTabs() {
+    return [this.generalTask, ...this.tasks].flatMap((task) => task.tabs);
+  }
+
+  // For the plain-browser preview card (js/platform.js).
+  describeUrl(url) {
+    const tab = this.tabs.find((t) => t.url === url) || this.allTabs().find((t) => t.url === url);
+    if (!tab) return null;
+    return { title: tab.title, snippet: tab.snippet, origin: tab.origin };
+  }
+
   async waitForComponents() {
-    console.log('waitForComponents started');
-    // Wait for sidebar component to be loaded
-    let attempts = 0;
-    const maxAttempts = 50; // 5 seconds max
-    
-    while (attempts < maxAttempts) {
-      const sidebar = document.querySelector('.sidebar');
-      const addTabButton = document.querySelector('.sidebar__add-tab');
-      
-      console.log(`Attempt ${attempts + 1}: Sidebar:`, !!sidebar, 'Add button:', !!addTabButton);
-      
-      if (sidebar && addTabButton) {
-        console.log('Components found, initializing tasks and task management');
+    // Components are inserted before App starts; this is a safety net.
+    for (let attempt = 0; attempt < 50; attempt++) {
+      if (document.querySelector('.sidebar') && document.querySelector('.sidebar__add-tab')) {
         this.initializeTasks();
         this.setupTaskManagement();
         return;
       }
-      
-      await new Promise(resolve => setTimeout(resolve, 100));
-      attempts++;
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
-    
+
     console.error('Failed to load components after 5 seconds');
     this.createFallbackTaskButton();
   }
 
   createFallbackTaskButton() {
     const sidebarContainer = document.querySelector('#sidebar-container');
-    if (sidebarContainer) {
-      console.log('Creating fallback sidebar structure...');
-      sidebarContainer.innerHTML = `
-        <div class="sidebar">
-          <div class="sidebar-background"></div>
-          <div class="sidebar__content">
-            <div class="sidebar__header">
-              <h3 class="sidebar__title">Task / Query</h3>
-              <button class="sidebar__add-tab" type="button" title="New Task">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <path d="M8 1v6H2v2h6v6h2V9h6V7H10V1H8z"/>
-                </svg>
-              </button>
-            </div>
-            <div class="sidebar__tab-list">
-              <!-- Tasks will be dynamically added here -->
-            </div>
+    if (!sidebarContainer) return;
+    sidebarContainer.innerHTML = `
+      <div class="sidebar">
+        <div class="sidebar-background"></div>
+        <div class="sidebar__content">
+          <div class="sidebar__header">
+            <h3 class="sidebar__title label">Tasks</h3>
+            <button class="sidebar__add-tab" type="button" title="New search (Ctrl+T)" aria-label="New search">+</button>
           </div>
+          <div class="sidebar__tab-list"></div>
         </div>
-      `;
-      
-      // Now try to set up task management again
-      setTimeout(() => {
-        this.initializeTasks();
-        this.setupTaskManagement();
-      }, 100);
-    }
+      </div>
+    `;
+    setTimeout(() => {
+      this.initializeTasks();
+      this.setupTaskManagement();
+    }, 100);
   }
 
-
-
   initializeEventListeners() {
-    // Window Controls
     this.setupWindowControls();
-    
-    // Navigation Controls
-    this.setupNavigationControls();
-    
-    // Button Active State Handling
     this.setupButtonActiveStates();
-
     this.setupQueryInput();
-    
-    // Menu Button Toggle
     this.setupMenuButton();
-    
-    // Network Button Toggle
     this.setupNetworkButton();
-    
-    // Webview Handling
     this.setupWebview();
-    
-    // Header Visibility
     this.setupHeaderVisibility();
-    
-    // Prevent Zoom Functionality
     this.preventZoomFunctionality();
-    
-    // Collapsed Query Input Handling
     this.setupCollapsedQueryInput();
   }
 
   initializeTasks() {
-    // Start with no tasks - blank slate, but General task is always available
+    // Start with no tasks. General is always there.
     this.isGeneralTaskActive = true;
     this.renderTasks();
     this.renderTabs();
   }
 
   setupTaskManagement() {
-    // Use event delegation to handle the add task button
+    // Delegated, because the task list is re-rendered often.
     document.addEventListener('click', (e) => {
-      console.log('Click detected on:', e.target);
-      console.log('Closest sidebar__add-tab:', e.target.closest('.sidebar__add-tab'));
-      
       if (e.target.closest('.sidebar__add-tab')) {
         e.preventDefault();
         e.stopPropagation();
-        console.log('Add task button clicked via event delegation!');
-        
-        // Add visual feedback
-        const button = e.target.closest('.sidebar__add-tab');
-        button.style.transform = 'scale(0.95)';
-        setTimeout(() => {
-          button.style.transform = '';
-        }, 100);
-        
-        // Open query input screen instead of creating a task directly
         this.openQueryInput();
       }
     });
-    
-    // Also add a global keyboard shortcut for new tasks
+
     document.addEventListener('keydown', (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 't') {
         e.preventDefault();
         this.openQueryInput();
       }
     });
-    
-    console.log('Task management setup complete with event delegation');
-    
-    // Test if we can find the button
-    setTimeout(() => {
-      const testButton = document.querySelector('.sidebar__add-tab');
-      console.log('Test button found:', testButton);
-      if (testButton) {
-        console.log('Button HTML:', testButton.outerHTML);
-        console.log('Button computed style pointer-events:', window.getComputedStyle(testButton).pointerEvents);
-        console.log('Button computed style z-index:', window.getComputedStyle(testButton).zIndex);
-      }
-    }, 1000);
   }
 
+  // Back to the start page: the query box, focused.
   openQueryInput() {
-    // Deactivate webview and expand query input
     this.deactivateWebview();
-    
-    // Focus the query input
     const queryInputTextArea = document.querySelector('.query-input__text-area');
     if (queryInputTextArea) {
-      setTimeout(() => {
-        queryInputTextArea.focus();
-      }, 100);
+      setTimeout(() => queryInputTextArea.focus(), 100);
     }
   }
 
-  createTask(title = 'New Task', icon = null) {
-    console.log('Creating new task:', title);
+  createTask(title = 'New task', intent = null) {
     const task = {
       id: Date.now() + Math.random(),
       title: title,
-      icon: icon,
+      intent: intent,
       tabs: [],
       createdAt: new Date()
     };
 
     this.tasks.push(task);
-    console.log('Total tasks now:', this.tasks.length);
     this.renderTasks();
     this.switchToTask(this.tasks.length - 1);
   }
 
-  async createTab(url, title = 'New Tab', snippet = '') {
-    console.log('Creating new tab:', url, title, snippet);
-    if (this.tasks.length === 0) {
-      this.createTask('New Task');
-    }
-    
-    const activeTask = this.tasks[this.activeTaskIndex];
-    if (!activeTask) return;
-    
-    console.log('Creating new tab for task:', activeTask.title, 'Tab:', title);
-    const tab = {
+  newTab(url, title, snippet, origin) {
+    return {
       id: Date.now() + Math.random(),
       url: url,
-      title: title,
-      snippet: snippet,
+      title: title || 'New tab',
+      snippet: snippet || '',
+      origin: origin || '',
       favicon: this.getFaviconUrl(url),
       webview: null
     };
+  }
 
-    activeTask.tabs.push(tab);
-    console.log('Total tabs in current task now:', activeTask.tabs.length);
-    this.renderTasks(); // Update task count display
+  // Adds a tab to the active regular task (creating one if needed).
+  // Pass { recordLink: false } when the caller sends links to the backend itself.
+  async createTab(url, title = 'New tab', snippet = '', origin = '', { recordLink = true } = {}) {
+    if (this.tasks.length === 0 || this.isGeneralTaskActive) {
+      this.createTask('New task');
+    }
+
+    const activeTask = this.tasks[this.activeTaskIndex];
+    if (!activeTask) return;
+
+    activeTask.tabs.push(this.newTab(url, title, snippet, origin));
+    this.renderTasks();
     this.renderTabs();
     this.switchToTab(activeTask.tabs.length - 1);
 
-    // Call the backend API to add the link (only for non-General tasks)
-    await this.addLinkToBackend(url, title, snippet);
+    if (recordLink) {
+      await this.addLinksToBackend([url]);
+    }
   }
 
-  createTabInGeneralTask(url, title = 'New Tab', snippet = '') {
-    console.log('Creating new tab in General task:', url, title, snippet);
-    
-    const tab = {
-      id: Date.now() + Math.random(),
-      url: url,
-      title: title,
-      snippet: snippet,
-      favicon: this.getFaviconUrl(url),
-      webview: null
-    };
-
-    this.generalTask.tabs.push(tab);
-    console.log('Total tabs in General task now:', this.generalTask.tabs.length);
-    this.renderTasks(); // Update task count display
+  createTabInGeneralTask(url, title = 'New tab', snippet = '', origin = '') {
+    this.generalTask.tabs.push(this.newTab(url, title, snippet, origin));
+    this.renderTasks();
     this.renderTabs();
     this.switchToTab(this.generalTask.tabs.length - 1);
   }
 
-  async addLinkToBackend(url, title, snippet) {
-    // Only call the API if we have a current query (from a search) and we're not in General task
-    if (!this.currentQuery || this.isGeneralTaskActive) {
-      console.log('Skipping backend API call - no current query or in General task');
-      return;
-    }
+  // One add-links call for any number of URLs (the API takes a list).
+  async addLinksToBackend(urls) {
+    // Only links that came from a search in a regular task are recorded.
+    if (!this.currentQuery || this.isGeneralTaskActive || !urls.length) return;
 
     try {
-      console.log('Adding link to backend:', { url, title, snippet, query: this.currentQuery, intent: this.currentIntent });
-      
-      const result = await window.GyrusAPI.addLinks({
-        links: [url],
+      await window.GyrusAPI.addLinks({
+        links: urls,
         query: this.currentQuery,
         intent: this.currentIntent
       });
-      console.log('Backend add-links response:', result);
     } catch (error) {
+      // Recording the click is optional; never break the UI over it.
       console.error('Error calling add-links API:', error);
-      // Don't throw the error to avoid breaking the UI
     }
-  }
-
-  switchToTask(index) {
-    if (index < 0 || index >= this.tasks.length) return;
-
-    // Update active task
-    this.activeTaskIndex = index;
-    this.activeTabIndex = 0; // Reset to first tab of new task
-    
-    const activeTask = this.tasks[index];
-    console.log('Switched to task:', activeTask.title);
-
-    // Switch to first tab of the task
-    if (activeTask.tabs.length > 0) {
-      this.switchToTaskTab(0);
-    } else {
-      // No tabs in this task, clear webview and set General tab as active
-      this.isGeneralTabActive = true;
-      const webview = document.getElementById('browser-webview');
-      if (webview) {
-        webview.src = this.generalTab.url;
-      }
-      
-      const urlBarInput = document.querySelector('.url-bar__input');
-      if (urlBarInput) {
-        urlBarInput.value = this.generalTab.url;
-      }
-    }
-
-    this.renderTasks();
-    this.renderTabs();
   }
 
   switchToGeneralTask() {
     this.isGeneralTaskActive = true;
     this.activeTabIndex = 0;
-    
-    // Update webview to show first tab of General task, or blank if no tabs
+
     const webview = document.getElementById('browser-webview');
+    const first = this.generalTask.tabs[0];
     if (webview) {
-      if (this.generalTask.tabs.length > 0) {
-        webview.src = this.generalTask.tabs[0].url;
-      } else {
-        webview.src = 'about:blank';
-      }
+      webview.src = first ? first.url : 'about:blank';
     }
 
-    // Update URL bar
     const urlBarInput = document.querySelector('.url-bar__input');
     if (urlBarInput) {
-      if (this.generalTask.tabs.length > 0) {
-        urlBarInput.value = this.generalTask.tabs[0].url;
-      } else {
-        urlBarInput.value = '';
-      }
+      urlBarInput.value = first ? first.url : '';
     }
 
     this.renderTasks();
@@ -340,24 +347,19 @@ class App {
   switchToTask(index) {
     if (index < 0 || index >= this.tasks.length) return;
 
-    // Update active task
     this.isGeneralTaskActive = false;
     this.activeTaskIndex = index;
-    this.activeTabIndex = 0; // Reset to first tab of new task
-    
-    const activeTask = this.tasks[index];
-    console.log('Switched to task:', activeTask.title);
+    this.activeTabIndex = 0;
 
-    // Switch to first tab of the task
+    const activeTask = this.tasks[index];
+
     if (activeTask.tabs.length > 0) {
       this.switchToTab(0);
     } else {
-      // No tabs in this task, clear webview
       const webview = document.getElementById('browser-webview');
       if (webview) {
         webview.src = 'about:blank';
       }
-      
       const urlBarInput = document.querySelector('.url-bar__input');
       if (urlBarInput) {
         urlBarInput.value = '';
@@ -369,27 +371,17 @@ class App {
   }
 
   switchToTab(index) {
-    // Determine which task is active
-    let activeTask;
-    if (this.isGeneralTaskActive) {
-      activeTask = this.generalTask;
-    } else {
-      activeTask = this.tasks[this.activeTaskIndex];
-    }
-    
+    const activeTask = this.activeTask;
     if (!activeTask || index < 0 || index >= activeTask.tabs.length) return;
 
-    // Update active tab
     this.activeTabIndex = index;
     const activeTab = activeTask.tabs[index];
 
-    // Update webview
     const webview = document.getElementById('browser-webview');
     if (webview) {
       webview.src = activeTab.url;
     }
 
-    // Update URL bar
     const urlBarInput = document.querySelector('.url-bar__input');
     if (urlBarInput) {
       urlBarInput.value = activeTab.url;
@@ -399,96 +391,62 @@ class App {
   }
 
   closeTask(index) {
-    // Prevent closing the General task (it's not in the tasks array anyway)
-    console.log('Closing task at index:', index);
-    
-    // Close all tabs in the task first
-    const taskToClose = this.tasks[index];
-    if (taskToClose) {
-      taskToClose.tabs = [];
-    }
+    // General is not in this.tasks, so it can't be closed here.
+    if (index < 0 || index >= this.tasks.length) return;
 
-    // Remove the task
     this.tasks.splice(index, 1);
 
-    // If no tasks remain, switch to General task
     if (this.tasks.length === 0) {
       this.switchToGeneralTask();
+      this.showStartPageIfEmpty();
       return;
     }
 
-    // Adjust active task index
     if (this.activeTaskIndex >= index) {
       this.activeTaskIndex = Math.max(0, this.activeTaskIndex - 1);
     }
 
-    // Switch to the new active task
     this.switchToTask(this.activeTaskIndex);
   }
 
+  // Works for General and regular tasks. Closing the last tab of a task leaves
+  // it empty; if no tab is left anywhere, the start page comes back.
   closeTab(index) {
-    const activeTask = this.tasks[this.activeTaskIndex];
-    if (!activeTask || activeTask.tabs.length <= 1) return; // Keep at least one tab
+    const activeTask = this.activeTask;
+    if (!activeTask || index < 0 || index >= activeTask.tabs.length) return;
 
     activeTask.tabs.splice(index, 1);
 
-    // Adjust active tab index
-    if (this.activeTabIndex >= index) {
+    if (this.activeTabIndex > index || this.activeTabIndex >= activeTask.tabs.length) {
       this.activeTabIndex = Math.max(0, this.activeTabIndex - 1);
     }
 
-    // Update task count display and switch to the new active tab
     this.renderTasks();
+
+    if (activeTask.tabs.length === 0) {
+      const webview = document.getElementById('browser-webview');
+      if (webview) webview.src = 'about:blank';
+      const urlBarInput = document.querySelector('.url-bar__input');
+      if (urlBarInput) urlBarInput.value = '';
+      this.activeTabIndex = 0;
+      this.renderTabs();
+      this.showStartPageIfEmpty();
+      return;
+    }
+
     this.switchToTab(this.activeTabIndex);
   }
 
-  detectTaskIcon(links) {
-    // Analyze links and snippets to determine the most representative icon
-    const content = links.map(link => 
-      `${link.title} ${link.snippet || ''}`
-    ).join(' ').toLowerCase();
-    
-    // Define icon mappings based on content keywords
-    const iconMappings = [
-      { keywords: ['github', 'code', 'programming', 'developer', 'software'], icon: '💻' },
-      { keywords: ['youtube', 'video', 'tutorial', 'course'], icon: '📺' },
-      { keywords: ['twitter', 'social', 'tweet'], icon: '🐦' },
-      { keywords: ['linkedin', 'professional', 'career', 'job'], icon: '💼' },
-      { keywords: ['amazon', 'shopping', 'buy', 'product'], icon: '📦' },
-      { keywords: ['spotify', 'music', 'song', 'audio'], icon: '🎵' },
-      { keywords: ['netflix', 'movie', 'film', 'entertainment'], icon: '🎬' },
-      { keywords: ['reddit', 'discussion', 'community'], icon: '🤖' },
-      { keywords: ['stackoverflow', 'question', 'answer', 'help'], icon: '❓' },
-      { keywords: ['wikipedia', 'encyclopedia', 'knowledge'], icon: '📚' },
-      { keywords: ['arxiv', 'research', 'paper', 'academic'], icon: '📄' },
-      { keywords: ['medium', 'article', 'blog', 'writing'], icon: '📝' },
-      { keywords: ['notion', 'document', 'note'], icon: '📋' },
-      { keywords: ['figma', 'design', 'ui', 'ux'], icon: '🎨' },
-      { keywords: ['discord', 'chat', 'communication'], icon: '💬' },
-      { keywords: ['slack', 'team', 'collaboration'], icon: '💬' },
-      { keywords: ['google', 'search', 'web'], icon: '🔍' },
-      { keywords: ['bing', 'search'], icon: '🔎' }
-    ];
-    
-    // Find the best matching icon
-    for (const mapping of iconMappings) {
-      if (mapping.keywords.some(keyword => content.includes(keyword))) {
-        return mapping.icon;
-      }
+  showStartPageIfEmpty() {
+    if (this.allTabs().length === 0) {
+      this.deactivateWebview();
     }
-    
-    // Default icon based on content type
-    if (content.includes('research') || content.includes('study')) return '🔬';
-    if (content.includes('news') || content.includes('article')) return '📰';
-    if (content.includes('shopping') || content.includes('buy')) return '🛒';
-    if (content.includes('social') || content.includes('community')) return '👥';
-    
-    return '🌐'; // Default web icon
   }
 
   getFaviconUrl(url) {
     try {
       const urlObj = new URL(url);
+      if (urlObj.protocol !== 'http:' && urlObj.protocol !== 'https:') return null;
       return `${urlObj.protocol}//${urlObj.hostname}/favicon.ico`;
     } catch (e) {
       return null;
@@ -496,20 +454,11 @@ class App {
   }
 
   duplicateTab(tab) {
-    const activeTask = this.tasks[this.activeTaskIndex];
+    const activeTask = this.activeTask;
     if (!activeTask) return;
 
-    const duplicatedTab = {
-      id: Date.now() + Math.random(),
-      url: tab.url,
-      title: `${tab.title} (Copy)`,
-      snippet: tab.snippet,
-      favicon: tab.favicon,
-      webview: null
-    };
-
-    activeTask.tabs.push(duplicatedTab);
-    console.log('Duplicated tab:', tab.title);
+    activeTask.tabs.push(this.newTab(tab.url, `${tab.title} (copy)`, tab.snippet, tab.origin));
+    this.renderTasks();
     this.renderTabs();
     this.switchToTab(activeTask.tabs.length - 1);
   }
@@ -520,53 +469,34 @@ class App {
 
     tabList.innerHTML = '';
 
-    // Always render the General task first (permanent)
-    const generalTaskElement = document.createElement('div');
-    generalTaskElement.className = `sidebar__tab is-general-task ${this.isGeneralTaskActive ? 'is-active' : ''}`;
-    generalTaskElement.innerHTML = `
-      <div class="sidebar__tab-icon">
-        ${this.generalTask.icon}
-      </div>
-      <h4 class="sidebar__tab-title">${this.generalTask.title}</h4>
-      <span class="sidebar__tab-count">${this.generalTask.tabs.length}</span>
-    `;
+    const rows = [this.generalTask, ...this.tasks];
+    rows.forEach((task, i) => {
+      const isGeneral = i === 0;
+      const index = i - 1; // index into this.tasks
+      const isActive = isGeneral ? this.isGeneralTaskActive
+        : (!this.isGeneralTaskActive && index === this.activeTaskIndex);
 
-    // Add click handler for General task
-    generalTaskElement.addEventListener('click', () => {
-      this.switchToGeneralTask();
-    });
-
-    tabList.appendChild(generalTaskElement);
-
-    // Render regular tasks
-    this.tasks.forEach((task, index) => {
-      const taskElement = document.createElement('div');
-      taskElement.className = `sidebar__tab ${!this.isGeneralTaskActive && index === this.activeTaskIndex ? 'is-active' : ''}`;
-      taskElement.innerHTML = `
-        <div class="sidebar__tab-icon">
-          ${task.icon || '📝'}
-        </div>
-        <h4 class="sidebar__tab-title">${task.title}</h4>
-        <span class="sidebar__tab-count">${task.tabs.length}</span>
-        <button class="sidebar__tab-close" type="button" title="Close Task">
-        </button>
-      `;
-
-      // Add click handlers
-      taskElement.addEventListener('click', (e) => {
-        if (!e.target.closest('.sidebar__tab-close')) {
-          this.switchToTask(index);
-        }
+      const kind = isGeneral ? 'Everyday searches' : (INTENT_NAMES[task.intent] || 'Task');
+      const taskElement = this.rowElement({
+        className: `sidebar__tab${isGeneral ? ' is-general-task' : ''}`,
+        isActive,
+        title: task.title,
+        meta: kind,
+        count: task.tabs.length,
+        closeLabel: isGeneral ? null : 'Close task',
+        onOpen: () => (isGeneral ? this.switchToGeneralTask() : this.switchToTask(index))
       });
 
-      const closeButton = taskElement.querySelector('.sidebar__tab-close');
-      closeButton.addEventListener('click', (e) => {
+      const closeButton = taskElement.querySelector('.row__close');
+      closeButton?.addEventListener('click', (e) => {
         e.stopPropagation();
         this.closeTask(index);
       });
 
       tabList.appendChild(taskElement);
     });
+
+    this.updateTabsPresence();
   }
 
   renderTabs() {
@@ -575,43 +505,96 @@ class App {
 
     rightSidebar.innerHTML = '';
 
-    // Determine which task's tabs to show
-    let activeTask;
-    if (this.isGeneralTaskActive) {
-      activeTask = this.generalTask;
-    } else {
-      activeTask = this.tasks[this.activeTaskIndex];
-    }
+    const activeTask = this.activeTask;
 
     if (activeTask && activeTask.tabs.length > 0) {
       activeTask.tabs.forEach((tab, index) => {
-        const tabElement = document.createElement('div');
-        tabElement.className = `right-sidebar__tab ${index === this.activeTabIndex ? 'is-active' : ''}`;
-        tabElement.innerHTML = `
-          <div class="right-sidebar__tab-icon">
-            ${tab.favicon ? `<img src="${tab.favicon}" alt="favicon" onerror="this.style.display='none'">` : '🌐'}
-          </div>
-          <h4 class="right-sidebar__tab-title">${tab.title}</h4>
-          <button class="right-sidebar__tab-close" type="button" title="Close Tab">
-          </button>
-        `;
-
-        // Add click handlers
-        tabElement.addEventListener('click', (e) => {
-          if (!e.target.closest('.right-sidebar__tab-close')) {
-            this.switchToTab(index);
-          }
+        const tabElement = this.rowElement({
+          className: 'right-sidebar__tab',
+          isActive: index === this.activeTabIndex,
+          title: tab.title,
+          favicon: tab.favicon,
+          closeLabel: 'Close tab',
+          onOpen: () => this.switchToTab(index)
         });
 
-        const closeButton = tabElement.querySelector('.right-sidebar__tab-close');
-        closeButton.addEventListener('click', (e) => {
+        tabElement.querySelector('.row__close').addEventListener('click', (e) => {
           e.stopPropagation();
           this.closeTab(index);
         });
 
         rightSidebar.appendChild(tabElement);
       });
+    } else {
+      const empty = document.createElement('p');
+      empty.className = 'empty-note';
+      empty.textContent = 'No tabs in this task yet.';
+      rightSidebar.appendChild(empty);
     }
+
+    this.updateTabsPresence();
+    this.updatePageStatus();
+  }
+
+  // The one list row used for tasks and tabs (.row in _controls.css).
+  // Focusable; Enter or Space opens it.
+  rowElement({ className, isActive, title, meta, count, favicon, closeLabel, onOpen }) {
+    const row = document.createElement('div');
+    row.className = `row ${className}${isActive ? ' is-active' : ''}`;
+    row.setAttribute('role', 'listitem');
+    row.tabIndex = 0;
+    if (isActive) row.setAttribute('aria-current', 'true');
+    row.innerHTML = `
+      ${favicon !== undefined ? `<span class="row__icon">${favicon ? `<img src="${escapeHtml(favicon)}" alt="" onerror="this.remove()">` : ''}</span>` : ''}
+      <span class="row__text">
+        <span class="row__title" title="${escapeHtml(title)}">${escapeHtml(title)}</span>
+        ${meta ? `<span class="row__meta label">${escapeHtml(meta)}</span>` : ''}
+      </span>
+      ${count !== undefined ? `<span class="row__count" title="Tabs in this task">${count}</span>` : ''}
+      ${closeLabel ? `<button class="icon-button icon-button--sm row__close" type="button" title="${closeLabel}" aria-label="${closeLabel}">${ICON_CLOSE}</button>` : ''}
+    `;
+    row.addEventListener('click', (e) => {
+      if (!e.target.closest('.row__close')) onOpen();
+    });
+    row.addEventListener('keydown', (e) => {
+      if ((e.key === 'Enter' || e.key === ' ') && e.target === row) {
+        e.preventDefault();
+        onOpen();
+      }
+    });
+    return row;
+  }
+
+  // The intro under the query box only shows until the first tab exists.
+  updateTabsPresence() {
+    document.body.classList.toggle('has-tabs', this.allTabs().length > 0);
+  }
+
+  // One quiet line above the page saying how the open tab got there.
+  updatePageStatus() {
+    const container = document.querySelector('#webview-container .webview-container');
+    const status = container?.querySelector('.page-status');
+    const text = status?.querySelector('.page-status__text');
+    if (!container || !status || !text) return;
+
+    const tab = this.tabs[this.activeTabIndex];
+    const line = tab && tab.origin;
+    text.textContent = line || '';
+    status.hidden = !line;
+    container.classList.toggle('has-status', !!line);
+  }
+
+  // What happened after a search, in one line. Uses the intent from the API.
+  searchOutcome(intent, linkCount) {
+    const name = INTENT_NAMES[intent] || intent || 'Answer';
+    if (intent === 'Research' || intent === 'News') {
+      const crew = intent === 'Research' ? 'research crew' : 'news crew';
+      if (linkCount > 0) {
+        return `${name}: the ${crew} found ${linkCount} ${linkCount === 1 ? 'source' : 'sources'}`;
+      }
+      return `${name}: the ${crew} found nothing, so this is a normal search`;
+    }
+    return `${name}: opened a normal search`;
   }
 
   setupWindowControls() {
@@ -624,11 +607,6 @@ class App {
     document
       .getElementById('maximize-btn')
       ?.addEventListener('click', () => window.electronAPI.maximizeWindow());
-  }
-
-  setupNavigationControls() {
-    // Navigation controls are now handled by the webview setup
-    // This method is kept for potential future use
   }
 
   setupButtonActiveStates() {
@@ -647,6 +625,61 @@ class App {
     });
   }
 
+  // Suggestions for "@..." input: commands, search engines, and with
+  // "@duplicate words" the matching tabs of the active task.
+  buildSuggestions(text) {
+    if (!text.startsWith('@')) return [];
+    const term = text.substring(1).toLowerCase();
+    const matches = (item) =>
+      item.name.toLowerCase().includes(term) || item.description.toLowerCase().includes(term);
+
+    const suggestions = [
+      ...AT_COMMANDS.filter(matches).map((c) => ({ type: 'command', name: c.name, description: c.description })),
+      ...SEARCH_ENGINES.filter(matches).map((e) => ({ type: 'engine', name: e.name, description: e.description }))
+    ];
+
+    if (term.startsWith('duplicate')) {
+      const wanted = term.substring(9).trim();
+      this.tabs.forEach((tab) => {
+        if (tab.title.toLowerCase().includes(wanted) || tab.url.toLowerCase().includes(wanted)) {
+          suggestions.push({ type: 'duplicate', name: tab.title, description: 'Copy this tab', tab });
+        }
+      });
+    }
+    return suggestions;
+  }
+
+  // Exactly-one completion for Tab: an engine name, or a single duplicate match.
+  completeSuggestion(text) {
+    if (!text.startsWith('@')) return null;
+    const term = text.substring(1).toLowerCase();
+    const engines = SEARCH_ENGINES.filter((e) => e.name.startsWith(term));
+    if (engines.length === 1) return { type: 'engine', text: `@${engines[0].name} ` };
+
+    if (term.startsWith('duplicate')) {
+      const wanted = term.substring(9).trim();
+      const tabs = this.tabs.filter((tab) =>
+        tab.title.toLowerCase().startsWith(wanted) || tab.url.toLowerCase().includes(wanted));
+      if (tabs.length === 1) return { type: 'duplicate', text: `@duplicate ${tabs[0].title}` };
+    }
+    return null;
+  }
+
+  suggestionElement(className, suggestion) {
+    const item = document.createElement('div');
+    item.className = `row ${className}`;
+    item.setAttribute('role', 'option');
+    const name = suggestion.type === 'duplicate' ? '@duplicate' : `@${suggestion.name}`;
+    const description = suggestion.type === 'duplicate' ? suggestion.name : suggestion.description;
+    item.innerHTML = `
+      <span class="row__text">
+        <span class="row__title">${escapeHtml(name)}</span>
+        <span class="row__meta label">${escapeHtml(description)}</span>
+      </span>
+    `;
+    return item;
+  }
+
   setupQueryInput() {
     const queryInput_container = document.querySelector('.query-input-container');
     const queryInput_textArea = document.querySelector('.query-input__text-area');
@@ -656,197 +689,51 @@ class App {
 
     if (!queryInput_container || !queryInput_textArea) return;
 
-    // Create autocomplete container for main query input
     const autocompleteContainer = document.createElement('div');
-    autocompleteContainer.className = 'query-input__autocomplete';
-    autocompleteContainer.style.cssText = `
-      position: absolute;
-      top: 100%;
-      left: 0;
-      right: 0;
-      background: #1a1a1a;
-      border: 1px solid #333;
-      border-radius: 8px;
-      max-height: 300px;
-      overflow-y: auto;
-      z-index: 1000;
-      display: none;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      margin-top: 4px;
-    `;
+    autocompleteContainer.className = 'query-input__autocomplete suggestions panel';
+    autocompleteContainer.setAttribute('role', 'listbox');
     queryInput_container.appendChild(autocompleteContainer);
-
-    // Search engines and commands (same as right sidebar)
-    const searchEngines = [
-      { name: 'google', description: 'Google Search', icon: '🔍' },
-      { name: 'bing', description: 'Bing Search', icon: '🔎' },
-      { name: 'youtube', description: 'YouTube Search', icon: '📺' },
-      { name: 'github', description: 'GitHub Search', icon: '🐙' },
-      { name: 'stackoverflow', description: 'Stack Overflow Search', icon: '💻' },
-      { name: 'reddit', description: 'Reddit Search', icon: '🤖' },
-      { name: 'wikipedia', description: 'Wikipedia Search', icon: '📚' },
-      { name: 'arxiv', description: 'arXiv Papers', icon: '📄' },
-      { name: 'twitter', description: 'Twitter Search', icon: '🐦' },
-      { name: 'linkedin', description: 'LinkedIn Search', icon: '💼' },
-      { name: 'amazon', description: 'Amazon Search', icon: '📦' },
-      { name: 'ebay', description: 'eBay Search', icon: '🛒' },
-      { name: 'spotify', description: 'Spotify Search', icon: '🎵' },
-      { name: 'netflix', description: 'Netflix Search', icon: '🎬' },
-      { name: 'medium', description: 'Medium Search', icon: '📝' },
-      { name: 'quora', description: 'Quora Search', icon: '❓' },
-      { name: 'discord', description: 'Discord Search', icon: '💬' },
-      { name: 'slack', description: 'Slack Search', icon: '💬' },
-      { name: 'notion', description: 'Notion Search', icon: '📋' },
-      { name: 'figma', description: 'Figma Search', icon: '🎨' }
-    ];
 
     let selectedIndex = -1;
     let filteredSuggestions = [];
 
-    // Autocomplete functions
-    const showAutocomplete = (query) => {
-      if (!query.startsWith('@')) {
-        autocompleteContainer.style.display = 'none';
-        return;
-      }
+    const placeCaretAtEnd = () => {
+      const range = document.createRange();
+      const selection = window.getSelection();
+      range.selectNodeContents(queryInput_textArea);
+      range.collapse(false);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    };
 
-      const searchTerm = query.substring(1).toLowerCase();
-      const suggestions = [];
+    const fillWith = (text) => {
+      queryInput_textArea.innerText = text;
+      hideAutocomplete();
+      queryInput_textArea.focus();
+      placeCaretAtEnd();
+    };
 
-      // Add command suggestions first
-      const commands = [
-        { name: 'duplicate', description: 'Duplicate a tab', icon: '📋' },
-        { name: 'close', description: 'Close current tab', icon: '❌' },
-        { name: 'closeall', description: 'Close all tabs in task', icon: '🗑️' },
-        { name: 'newtask', description: 'Create new task', icon: '➕' },
-        { name: 'closetask', description: 'Close current task', icon: '📁' }
-      ];
-
-      const matchingCommands = commands.filter(cmd => 
-        cmd.name.toLowerCase().includes(searchTerm) ||
-        cmd.description.toLowerCase().includes(searchTerm)
-      );
-
-      matchingCommands.forEach(cmd => {
-        suggestions.push({
-          type: 'command',
-          name: cmd.name,
-          description: cmd.description,
-          icon: cmd.icon
-        });
-      });
-
-      // Add search engines
-      const matchingEngines = searchEngines.filter(engine => 
-        engine.name.toLowerCase().includes(searchTerm) ||
-        engine.description.toLowerCase().includes(searchTerm)
-      );
-      
-      matchingEngines.forEach(engine => {
-        suggestions.push({
-          type: 'engine',
-          name: engine.name,
-          description: engine.description,
-          icon: engine.icon
-        });
-      });
-
-      // Add tab duplication if it starts with @duplicate
-      if (searchTerm.startsWith('duplicate')) {
-        const activeTask = this.tasks[this.activeTaskIndex];
-        if (activeTask && activeTask.tabs.length > 0) {
-          const duplicateQuery = searchTerm.substring(9).trim().toLowerCase();
-          activeTask.tabs.forEach(tab => {
-            if (tab.title.toLowerCase().includes(duplicateQuery) || 
-                tab.url.toLowerCase().includes(duplicateQuery)) {
-              suggestions.push({
-                type: 'duplicate',
-                name: tab.title,
-                description: 'Duplicate this tab',
-                icon: '📋',
-                tab: tab
-              });
-            }
-          });
-        }
-      }
-
+    const showAutocomplete = (text) => {
+      const suggestions = this.buildSuggestions(text);
       if (suggestions.length === 0) {
-        autocompleteContainer.style.display = 'none';
+        hideAutocomplete();
         return;
       }
 
       filteredSuggestions = suggestions;
       autocompleteContainer.innerHTML = '';
-      
-      suggestions.forEach((suggestion, index) => {
-        const item = document.createElement('div');
-        item.className = 'query-input__autocomplete-item';
-        item.style.cssText = `
-          padding: 12px 16px;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          border-bottom: 1px solid #333;
-          transition: background-color 0.2s;
-        `;
-        
-        if (suggestion.type === 'command') {
-          item.innerHTML = `
-            <div style="font-size: 16px;">${suggestion.icon}</div>
-            <div style="flex: 1;">
-              <div style="font-weight: 600; color: #fff;">@${suggestion.name}</div>
-              <div style="font-size: 12px; color: #999;">${suggestion.description}</div>
-            </div>
-          `;
-          
-          item.addEventListener('click', () => {
-            const currentValue = queryInput_textArea.innerText;
-            const beforeAt = currentValue.substring(0, currentValue.indexOf('@'));
-            queryInput_textArea.innerText = beforeAt + `@${suggestion.name} `;
-            autocompleteContainer.style.display = 'none';
-            queryInput_textArea.focus();
-          });
-        } else if (suggestion.type === 'engine') {
-          item.innerHTML = `
-            <div style="font-size: 16px;">${suggestion.icon}</div>
-            <div style="flex: 1;">
-              <div style="font-weight: 600; color: #fff;">@${suggestion.name}</div>
-              <div style="font-size: 12px; color: #999;">${suggestion.description}</div>
-            </div>
-          `;
-          
-          item.addEventListener('click', () => {
-            const currentValue = queryInput_textArea.innerText;
-            const beforeAt = currentValue.substring(0, currentValue.indexOf('@'));
-            queryInput_textArea.innerText = beforeAt + `@${suggestion.name} `;
-            autocompleteContainer.style.display = 'none';
-            queryInput_textArea.focus();
-          });
-        } else if (suggestion.type === 'duplicate') {
-          item.innerHTML = `
-            <div style="font-size: 16px;">${suggestion.icon}</div>
-            <div style="flex: 1;">
-              <div style="font-weight: 600; color: #fff;">@duplicate</div>
-              <div style="font-size: 12px; color: #999;">${suggestion.name}</div>
-            </div>
-          `;
-          
-          item.addEventListener('click', async () => {
+
+      suggestions.forEach((suggestion) => {
+        const item = this.suggestionElement('query-input__autocomplete-item', suggestion);
+        item.addEventListener('mousedown', (e) => e.preventDefault()); // keep focus
+        item.addEventListener('click', async () => {
+          if (suggestion.type === 'duplicate') {
             queryInput_textArea.innerText = `@duplicate ${suggestion.name}`;
             await submitQuery();
-          });
-        }
-
-        item.addEventListener('mouseenter', () => {
-          item.style.backgroundColor = '#333';
+          } else {
+            fillWith(`@${suggestion.name} `);
+          }
         });
-
-        item.addEventListener('mouseleave', () => {
-          item.style.backgroundColor = 'transparent';
-        });
-
         autocompleteContainer.appendChild(item);
       });
 
@@ -860,103 +747,32 @@ class App {
     };
 
     const selectAutocompleteItem = (direction) => {
-      if (filteredSuggestions.length === 0) return;
-
       const items = autocompleteContainer.querySelectorAll('.query-input__autocomplete-item');
-      
-      if (selectedIndex >= 0) {
-        items[selectedIndex].style.backgroundColor = 'transparent';
-      }
-
+      if (items.length === 0) return;
+      if (selectedIndex >= 0) items[selectedIndex].classList.remove('is-selected');
       if (direction === 'up') {
         selectedIndex = selectedIndex <= 0 ? items.length - 1 : selectedIndex - 1;
       } else {
         selectedIndex = selectedIndex >= items.length - 1 ? 0 : selectedIndex + 1;
       }
-
-      items[selectedIndex].style.backgroundColor = '#333';
+      items[selectedIndex].classList.add('is-selected');
       items[selectedIndex].scrollIntoView({ block: 'nearest' });
     };
 
     const handleTabCompletion = async () => {
-      const currentValue = queryInput_textArea.innerText;
-      
-      if (!currentValue.startsWith('@')) {
+      const text = queryInput_textArea.innerText;
+      const completion = this.completeSuggestion(text);
+      if (completion) {
+        fillWith(completion.text);
+        if (completion.type === 'duplicate') await submitQuery();
         return;
       }
-
-      const searchTerm = currentValue.substring(1).toLowerCase();
-      
-      // Find matching search engines
-      const matchingEngines = searchEngines.filter(engine => 
-        engine.name.toLowerCase().startsWith(searchTerm)
-      );
-
-      // Find matching duplicate commands
-      let matchingDuplicates = [];
-      if (searchTerm.startsWith('duplicate')) {
-        const activeTask = this.tasks[this.activeTaskIndex];
-        if (activeTask && activeTask.tabs.length > 0) {
-          const duplicateQuery = searchTerm.substring(9).trim().toLowerCase();
-          activeTask.tabs.forEach(tab => {
-            if (tab.title.toLowerCase().startsWith(duplicateQuery) || 
-                tab.url.toLowerCase().includes(duplicateQuery)) {
-              matchingDuplicates.push({
-                type: 'duplicate',
-                name: tab.title,
-                tab: tab
-              });
-            }
-          });
-        }
-      }
-
-      // If there's exactly one match, complete it
-      if (matchingEngines.length === 1) {
-        const engine = matchingEngines[0];
-        const beforeAt = currentValue.substring(0, currentValue.indexOf('@'));
-        const newText = beforeAt + `@${engine.name} `;
-        queryInput_textArea.innerText = newText;
-        
-        // Position cursor at the end
-        const range = document.createRange();
-        const selection = window.getSelection();
-        range.selectNodeContents(queryInput_textArea);
-        range.collapse(false); // false means collapse to end
-        selection.removeAllRanges();
-        selection.addRange(range);
-        return;
-      }
-
-      if (matchingDuplicates.length === 1) {
-        const duplicate = matchingDuplicates[0];
-        const beforeAt = currentValue.substring(0, currentValue.indexOf('@'));
-        const newText = beforeAt + `@duplicate ${duplicate.name}`;
-        queryInput_textArea.innerText = newText;
-        
-        // Position cursor at the end
-        const range = document.createRange();
-        const selection = window.getSelection();
-        range.selectNodeContents(queryInput_textArea);
-        range.collapse(false); // false means collapse to end
-        selection.removeAllRanges();
-        selection.addRange(range);
-        
-        // Execute the duplicate command immediately
-        await submitQuery();
-        return;
-      }
-
-      // If multiple matches, show autocomplete
-      if (matchingEngines.length > 1 || matchingDuplicates.length > 1) {
-        showAutocomplete(currentValue);
-      }
+      showAutocomplete(text);
     };
 
-    // Setup focus overlay click handler to dismiss editor mode
+    // Clicking the dimmed area leaves editor mode.
     if (focusOverlay) {
       focusOverlay.addEventListener('click', (e) => {
-        // Only dismiss if clicking on the overlay itself, not on the query input
         if (e.target === focusOverlay) {
           queryInput_container.classList.remove('is-editor-mode');
           focusOverlay.classList.remove('is-active');
@@ -965,477 +781,355 @@ class App {
       });
     }
 
-
     const switchToEditorMode = () => {
       if (!queryInput_container.classList.contains('is-editor-mode')) {
         queryInput_container.classList.remove('is-collapsed');
         queryInput_container.classList.add('is-editor-mode');
         focusOverlay?.classList.add('is-active');
-        adjustHeight(); // Re-check height after mode switch
+        adjustHeight();
       }
     };
 
     const toggleEditorMode = () => {
       queryInput_container.classList.toggle('is-editor-mode');
       focusOverlay?.classList.toggle('is-active');
-      adjustHeight(); // Recalculate height after toggle
+      adjustHeight();
+    };
+
+    const clearInput = () => {
+      queryInput_textArea.innerText = '';
+      queryInput_textArea.style.height = 'auto';
     };
 
     const submitQuery = async () => {
       const query = queryInput_textArea.innerText.trim();
-      
-      if (!query) {
-        console.log('Empty query, not submitting');
-        return;
-      }
-      
-      // Simulate click on the container
+      if (!query) return;
+
+      hideAutocomplete();
       queryInput_container.classList.add('is-active');
-      setTimeout(() => {
-        queryInput_container.classList.remove('is-active');
-      }, 100);
-      
-      console.log('Query submitted:', query);
-      
-      // Check if query is an LLM provider for easter egg
-      console.log('🔍 Checking query for easter egg:', query);
+      setTimeout(() => queryInput_container.classList.remove('is-active'), 100);
+
+      // Team joke: asking for a chatbot gets you the lobotomy page.
       if (this.isLLMProvider(query)) {
-        console.log('🎉 Easter egg triggered! Redirecting to lobotomy memes...');
         const lobotomyUrl = this.getLobotomyUrl();
-        console.log('📁 Lobotomy URL:', lobotomyUrl);
+        const origin = 'You asked for an AI chat site';
         if (this.isGeneralTaskActive) {
-          this.createTabInGeneralTask(lobotomyUrl, '🧠 SELF-LOBOTOMY 🧠', 'You\'ve been lobotomized!');
+          this.createTabInGeneralTask(lobotomyUrl, LOBOTOMY_TITLE, '', origin);
         } else {
-          await this.createTab(lobotomyUrl, '🧠 SELF-LOBOTOMY 🧠', 'You\'ve been lobotomized!');
+          await this.createTab(lobotomyUrl, LOBOTOMY_TITLE, '', origin, { recordLink: false });
         }
-        
-        // Clear the query input
-        queryInput_textArea.innerText = '';
-        queryInput_textArea.style.height = 'auto';
-        
-        // Activate webview and collapse query input
+        clearInput();
         this.activateWebview();
         return;
       }
-      
-      // Check if query is a search engine command (@engine or @engine query)
-      const searchMatch = query.match(/^@(\w+)(?:\s+(.+))?$/);
-      if (searchMatch) {
-        console.log('🔍 Processing search engine command:', query);
-        await this.processUrlInput(query);
-        
-        // Clear the query input
-        queryInput_textArea.innerText = '';
-        queryInput_textArea.style.height = 'auto';
-        
-        // Activate webview and collapse query input
-        this.activateWebview();
-        return;
-      }
-      
-      // Check if query is a direct URL (no spaces, and a known TLD at the end of the host)
+
+      // "@engine words", "@command", or a typed address: no backend involved.
+      const isAtCommand = /^@(\w+)(?:\s+(.+))?$/.test(query);
       const looksLikeUrl = query.startsWith('http') ||
         (!/\s/.test(query) && /\.(com|org|net|ai)(\/|:|\?|#|$)/i.test(query));
-      if (looksLikeUrl) {
-        console.log('🔍 Processing direct URL:', query);
+      if (isAtCommand || looksLikeUrl) {
         await this.processUrlInput(query);
-        
-        // Clear the query input
-        queryInput_textArea.innerText = '';
-        queryInput_textArea.style.height = 'auto';
-        
-        // Activate webview and collapse query input
-        this.activateWebview();
+        clearInput();
+        if (this.allTabs().length > 0) this.activateWebview();
         return;
       }
-      
+
+      const searchUrl = (q) => `https://www.google.com/search?q=${encodeURIComponent(q)}`;
+
       try {
         // Real backend if running, otherwise the demo stand-in (js/api.js)
         const data = await window.GyrusAPI.searchQuery(query);
-        console.log('Backend response:', data);
-        
-        // Store the current query and intent for future tab creation
+
         this.currentQuery = query;
         this.currentIntent = data.intent || 'Answer';
-        
-        // Handle different response formats based on intent
         const intent = this.currentIntent;
-        console.log('Detected intent:', intent);
-        console.log('Response format:', intent === 'News' || intent === 'Research' ? 'links' : 'query');
-        
-        if (intent === 'News' || intent === 'Research') {
-          // Check if data is an array (direct response) or has a links property
-          const links = Array.isArray(data) ? data : (data.links || []);
-          
-          if (links && links.length > 0) {
-            // Create a new task for News and Research intents
-            const taskTitle = query.length > 30 ? query.substring(0, 30) + '...' : query;
-            const taskIcon = this.detectTaskIcon(links);
-            this.createTask(taskTitle, taskIcon);
-            
-            // Create tabs for each link under the new task
-            // Note: createTask already switches to the new task
-            for (const link of links) {
-              await this.createTab(link.link, link.title, link.snippet);
-            }
-            
-            console.log(`Created task "${taskTitle}" with ${links.length} tabs for query: "${query}"`);
+
+        const links = (intent === 'News' || intent === 'Research')
+          ? (Array.isArray(data) ? data : (data.links || []))
+          : [];
+
+        if (links.length > 0) {
+          // Research and News get their own task, one tab per source.
+          const taskTitle = query.length > 30 ? query.substring(0, 30) + '...' : query;
+          this.createTask(taskTitle, intent);
+
+          const origin = this.searchOutcome(intent, links.length);
+          for (const link of links) {
+            await this.createTab(link.link, link.title, link.snippet, origin, { recordLink: false });
           }
+          // One add-links call for the whole set.
+          await this.addLinksToBackend(links.map((link) => link.link).filter(Boolean));
+          this.switchToTab(0);
         } else {
-          // For Navigational, Transactional, and Answer intents, add to General task
-          const searchQuery = data.query || query;
-          const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
-          
-          // Switch to General task first
+          // Navigational, Transactional, Answer (or a crew that found nothing):
+          // a normal search in General.
+          const searchText = data.query || query;
           this.switchToGeneralTask();
-          
-          // Create a new tab in the General task
-          this.createTabInGeneralTask(googleUrl, `${searchQuery} - Google Search`);
-          
-          console.log(`Added Google search tab to General task for query: "${searchQuery}"`);
+          this.createTabInGeneralTask(searchUrl(searchText), `${searchText} - Google search`, '',
+            this.searchOutcome(intent, 0));
         }
-        
-        // Clear the query input
-        queryInput_textArea.innerText = '';
-        queryInput_textArea.style.height = 'auto';
-        
-        // Activate webview and collapse query input
-        this.activateWebview();
-        
       } catch (error) {
         console.error('Error calling backend API:', error);
-        // Fallback: create a single tab with a Google search in General task
-        const fallbackUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
         this.switchToGeneralTask();
-        this.createTabInGeneralTask(fallbackUrl, `${query} - Search`, '');
-        
-        // Clear the query input
-        queryInput_textArea.innerText = '';
-        queryInput_textArea.style.height = 'auto';
-
-        // Show the tab we just opened
-        this.activateWebview();
+        this.createTabInGeneralTask(searchUrl(query), `${query} - Google search`, '',
+          'Something went wrong, so this is a normal search');
       }
+
+      clearInput();
+      this.activateWebview();
     };
 
-    // Smooth Growth & Mode Switching
+    // Grow with the text; long queries switch to editor mode.
     const adjustHeight = () => {
-      queryInput_textArea.style.height = 'auto'; // Reset height to get correct scrollHeight
-      queryInput_textArea.style.height = (queryInput_textArea.scrollHeight) + 'px';
-      
-      // Switch to editor mode if character limit is reached
+      queryInput_textArea.style.height = 'auto';
+      queryInput_textArea.style.height = queryInput_textArea.scrollHeight + 'px';
       if (queryInput_textArea.innerText.length > characterLimit) {
         switchToEditorMode();
       }
     };
-    
+
     queryInput_textArea.addEventListener('input', (e) => {
       adjustHeight();
       showAutocomplete(e.target.innerText);
     });
-    
-    // Key-based Events
+
     queryInput_textArea.addEventListener('keydown', (e) => {
-      // Handle autocomplete navigation
       if (autocompleteContainer.style.display === 'block') {
         if (e.key === 'ArrowDown') {
           e.preventDefault();
           selectAutocompleteItem('down');
           return;
-        } else if (e.key === 'ArrowUp') {
+        }
+        if (e.key === 'ArrowUp') {
           e.preventDefault();
           selectAutocompleteItem('up');
           return;
-        } else if (e.key === 'Enter' && selectedIndex >= 0 && filteredSuggestions.length > 0) {
+        }
+        if (e.key === 'Enter' && selectedIndex >= 0 && filteredSuggestions[selectedIndex]) {
           e.preventDefault();
-          const selectedSuggestion = filteredSuggestions[selectedIndex];
-          
-          if (selectedSuggestion.type === 'engine') {
-            const currentValue = queryInput_textArea.innerText;
-            const beforeAt = currentValue.substring(0, currentValue.indexOf('@'));
-            queryInput_textArea.innerText = beforeAt + `@${selectedSuggestion.name} `;
-            autocompleteContainer.style.display = 'none';
-            queryInput_textArea.focus();
-            return;
-          } else if (selectedSuggestion.type === 'duplicate') {
-            queryInput_textArea.innerText = `@duplicate ${selectedSuggestion.name}`;
-            autocompleteContainer.style.display = 'none';
+          const picked = filteredSuggestions[selectedIndex];
+          if (picked.type === 'duplicate') {
+            queryInput_textArea.innerText = `@duplicate ${picked.name}`;
             submitQuery();
-            return;
+          } else {
+            fillWith(`@${picked.name} `);
           }
-        } else if (e.key === 'Escape') {
-          hideAutocomplete();
           return;
-        } else if (e.key === 'Tab') {
-          e.preventDefault();
-          handleTabCompletion();
+        }
+        if (e.key === 'Escape') {
+          hideAutocomplete();
           return;
         }
       }
-      
-      // Escape key to exit editor mode
+
+      if (e.key === 'Tab' && queryInput_textArea.innerText.startsWith('@')) {
+        e.preventDefault();
+        handleTabCompletion();
+        return;
+      }
+
       if (e.key === 'Escape' && queryInput_container.classList.contains('is-editor-mode')) {
         e.preventDefault();
         toggleEditorMode();
         queryInput_textArea.blur();
         return;
       }
-      // Toggle editor mode with Shift+Enter if below character limit
+      // Shift+Enter toggles editor mode for short queries.
       if (e.shiftKey && e.key === 'Enter') {
         e.preventDefault();
         if (queryInput_textArea.innerText.length <= characterLimit) {
           toggleEditorMode();
         }
-        return; // Stop further execution for this key event
+        return;
       }
-      // Submit with Enter only in pill mode
-      if (e.key === 'Enter' && !queryInput_container.classList.contains('is-editor-mode')) {
-        e.preventDefault(); 
+      // Enter submits in the one-line box; Ctrl/Cmd+Enter submits in editor mode.
+      if (e.key === 'Enter' &&
+          (!queryInput_container.classList.contains('is-editor-mode') || e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
         submitQuery();
       }
     });
 
-    // Button Clicks
-    queryInput_sendButton?.addEventListener('click', submitQuery);
+    queryInput_sendButton?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      submitQuery();
+    });
 
-    // Hide autocomplete when clicking outside
     document.addEventListener('click', (e) => {
       if (!e.target.closest('.query-input-container')) {
         hideAutocomplete();
       }
     });
 
-    // Hide autocomplete when input loses focus
     queryInput_textArea.addEventListener('blur', () => {
-      setTimeout(() => {
-        hideAutocomplete();
-      }, 150);
+      setTimeout(hideAutocomplete, 150);
     });
-
-
-
   }
 
-
+  // Menu button opens a small dropdown. The dropdown lives on <body> because
+  // the header clips its overflow.
   setupMenuButton() {
     const menuButton = document.querySelector('.menu-button');
-    const sidebar = document.querySelector('.sidebar');
-    const header = document.querySelector('.app-header');
-    
-    if (menuButton && sidebar && header) {
-      menuButton.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        // Toggle both header and sidebar visibility
-        if (sidebar.classList.contains('is-visible')) {
-          // Hide both
-          sidebar.classList.remove('is-visible');
-          header.classList.remove('is-visible');
-          menuButton.classList.remove('is-active');
-          // Update state tracking
-          this.setHeaderVisible(false);
-          this.setSidebarVisible(false);
-        } else {
-          // Show both
-          sidebar.classList.add('is-visible');
-          header.classList.add('is-visible');
-          menuButton.classList.add('is-active');
-          // Update state tracking
-          this.setHeaderVisible(true);
-          this.setSidebarVisible(true);
-        }
+    if (!menuButton) return;
+
+    const dropdown = document.createElement('div');
+    dropdown.className = 'menu-dropdown panel';
+    dropdown.setAttribute('role', 'menu');
+    document.body.appendChild(dropdown);
+
+    const close = () => {
+      dropdown.classList.remove('is-open');
+      menuButton.classList.remove('is-active');
+      menuButton.setAttribute('aria-expanded', 'false');
+    };
+
+    const items = () => [
+      {
+        label: this.panelsPinned ? 'Let the panels hide again' : 'Keep the panels open',
+        run: () => this.setPanelsPinned?.(!this.panelsPinned)
+      },
+      { label: 'Memory', run: () => this.openNetworkModal() },
+      { label: 'New search', run: () => this.openQueryInput() },
+      {
+        label: 'About Gyrus',
+        run: () => window.GyrusEasterEggs?.openAbout?.(),
+        hidden: !(window.GyrusEasterEggs && typeof window.GyrusEasterEggs.openAbout === 'function')
+      }
+    ];
+
+    const open = () => {
+      dropdown.innerHTML = '';
+      items().filter((item) => !item.hidden).forEach((item) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'button button--text';
+        button.setAttribute('role', 'menuitem');
+        button.textContent = item.label;
+        button.addEventListener('click', (e) => {
+          e.stopPropagation();
+          close();
+          item.run();
+        });
+        dropdown.appendChild(button);
       });
-    }
+      const rect = menuButton.getBoundingClientRect();
+      dropdown.style.top = `${rect.bottom + 4}px`; // --space-1 below the button
+      dropdown.style.right = `${Math.max(8, window.innerWidth - rect.right)}px`;
+      dropdown.classList.add('is-open');
+      menuButton.classList.add('is-active');
+      menuButton.setAttribute('aria-expanded', 'true');
+      dropdown.querySelector('button')?.focus();
+    };
+
+    menuButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (dropdown.classList.contains('is-open')) close(); else open();
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.menu-dropdown')) close();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && dropdown.classList.contains('is-open')) close();
+    });
+  }
+
+  openNetworkModal() {
+    const networkModal = document.getElementById('network-modal');
+    if (!networkModal) return;
+    networkModal.classList.add('is-visible');
+    document.querySelector('.network-button')?.classList.add('is-active');
+    networkModal.querySelector('.network-modal__close')?.focus();
+    this.updateNetworkGraph();
+  }
+
+  closeNetworkModal() {
+    document.getElementById('network-modal')?.classList.remove('is-visible');
+    document.querySelector('.network-button')?.classList.remove('is-active');
   }
 
   setupNetworkButton() {
     const networkButton = document.querySelector('.network-button');
     const networkModal = document.getElementById('network-modal');
-    
-    if (networkButton && networkModal) {
-      networkButton.addEventListener('click', async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        // Show the network modal
-        networkModal.classList.add('is-visible');
-        networkButton.classList.add('is-active');
-        
-        // Update network information
-        this.updateNetworkInfo();
-        
-        // Update network graph with API data
-        await this.updateNetworkGraph();
-      });
-      
-      // Close modal when clicking the overlay
-      const overlay = networkModal.querySelector('.network-modal__overlay');
-      if (overlay) {
-        overlay.addEventListener('click', () => {
-          networkModal.classList.remove('is-visible');
-          networkButton.classList.remove('is-active');
-        });
+    if (!networkButton || !networkModal) return;
+
+    networkButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.openNetworkModal();
+    });
+
+    networkModal.querySelector('.network-modal__overlay')
+      ?.addEventListener('click', () => this.closeNetworkModal());
+    networkModal.querySelector('.network-modal__close')
+      ?.addEventListener('click', () => this.closeNetworkModal());
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && networkModal.classList.contains('is-visible')) {
+        this.closeNetworkModal();
       }
-      
-      // Close modal with Escape key
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && networkModal.classList.contains('is-visible')) {
-          networkModal.classList.remove('is-visible');
-          networkButton.classList.remove('is-active');
-        }
-      });
-      
-      // Setup action buttons
-      this.setupNetworkActions();
-    }
+    });
+
+    document.getElementById('refresh-network')
+      ?.addEventListener('click', () => this.updateNetworkGraph());
   }
 
-  async updateNetworkInfo() {
-    // Update connection status
-    const connectionStatus = document.getElementById('connection-status');
-    if (connectionStatus) {
-      if (navigator.onLine) {
-        connectionStatus.textContent = 'Connected';
-        connectionStatus.style.color = '#22c55e';
-      } else {
-        connectionStatus.textContent = 'Disconnected';
-        connectionStatus.style.color = '#ef4444';
-      }
-    }
-    
-    // Update network type
-    const networkType = document.getElementById('network-type');
-    if (networkType) {
-      if ('connection' in navigator) {
-        const connection = navigator.connection;
-        if (connection.effectiveType) {
-          networkType.textContent = connection.effectiveType.toUpperCase();
-        } else {
-          networkType.textContent = 'Unknown';
-        }
-      } else {
-        networkType.textContent = 'Unknown';
-      }
-    }
-    
-    // Update network graph
-    await this.updateNetworkGraph();
-  }
-
-
-
-  setupNetworkActions() {
-    const refreshButton = document.getElementById('refresh-network');
-    
-    if (refreshButton) {
-      refreshButton.addEventListener('click', async () => {
-        this.updateNetworkInfo();
-        await this.updateNetworkGraph();
-      });
-    }
-  }
-
+  // Draws the memory graph. Ink on paper: topics are filled squares, searches
+  // are open circles, links are small dots. Clicking a node turns it blue and
+  // darkens its edges; that is the only use of colour.
   async updateNetworkGraph() {
     const container = document.getElementById('network-graph');
-    if (!container || typeof d3 === 'undefined') return;
+    if (!container) return;
 
-    // Clear existing content
-    container.innerHTML = '';
-    // Remove any existing HTML legend
-    const oldLegend = document.getElementById('network-graph-legend');
-    if (oldLegend) oldLegend.remove();
+    const showMessage = (title, detail) => {
+      container.innerHTML = '';
+      const box = document.createElement('div');
+      box.className = 'network-graph__empty';
+      const strong = document.createElement('strong');
+      strong.textContent = title;
+      const p = document.createElement('span');
+      p.textContent = detail;
+      box.append(strong, p);
+      container.appendChild(box);
+    };
 
-    // Add HTML legend (fixed in bottom left)
-    const htmlLegend = document.createElement('div');
-    htmlLegend.id = 'network-graph-legend';
-    htmlLegend.style.position = 'absolute';
-    htmlLegend.style.left = '24px';
-    htmlLegend.style.bottom = '24px';
-    htmlLegend.style.background = 'rgba(30, 41, 59, 0.85)';
-    htmlLegend.style.borderRadius = '8px';
-    htmlLegend.style.padding = '12px 18px';
-    htmlLegend.style.display = 'flex';
-    htmlLegend.style.flexDirection = 'column';
-    htmlLegend.style.gap = '10px';
-    htmlLegend.style.boxShadow = '0 2px 8px rgba(0,0,0,0.10)';
-    htmlLegend.style.zIndex = '10';
-    htmlLegend.innerHTML = `
-      <div style="display:flex;align-items:center;gap:8px;"><span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:#6366f1;"></span><span style="color:#fff;font-weight:600;">Concept</span></div>
-      <div style="display:flex;align-items:center;gap:8px;"><span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:#10b981;"></span><span style="color:#fff;font-weight:600;">Query</span></div>
-      <div style="display:flex;align-items:center;gap:8px;"><span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:#f59e42;"></span><span style="color:#fff;font-weight:600;">Link</span></div>
-    `;
-    container.style.position = 'relative';
-    container.appendChild(htmlLegend);
-
-    // Add event listener for X button to close modal
-    const modal = document.getElementById('network-modal');
-    const closeBtn = modal.querySelector('.network-modal__close');
-    if (closeBtn) {
-      closeBtn.onclick = () => {
-        modal.classList.remove('is-visible');
-        // Optionally, remove .is-active from network button if needed
-        const networkButton = document.querySelector('.network-button');
-        if (networkButton) networkButton.classList.remove('is-active');
-      };
+    if (typeof d3 === 'undefined') {
+      showMessage('The graph could not be drawn.', 'Its drawing library (d3) did not load. Check your connection and try Refresh.');
+      return;
     }
 
-    // Fetch data from API
+    container.innerHTML = '';
+
     let nodes = [];
     let links = [];
-    
+
     try {
       const data = await window.GyrusAPI.getGraph();
-      if (data) {
-        console.log('Graph API response:', data);
-        
-        // Process API data to create nodes and links
-        if (data.concepts && data.queries && data.relationships) {
-          // Create nodes from concepts
-          const conceptNodes = data.concepts.map((concept, index) => ({
-            id: `concept_${index}`,
-            name: concept,
-            type: 'concept'
-          }));
-          
-          // Create nodes from queries
-          const queryNodes = data.queries.map((query, index) => ({
-            id: `query_${index}`,
-            name: query,
-            type: 'query'
-          }));
-          
-          // Combine all nodes
-          nodes = [...conceptNodes, ...queryNodes];
-          
-          // Create links from relationships
-          links = data.relationships.map((relationship, index) => ({
-            source: relationship.source,
-            target: relationship.target
-          }));
-        } else if (data.nodes && data.links) {
-          // Alternative format: direct nodes and links
-          nodes = data.nodes;
-          links = data.links;
-        }
+      if (data && data.concepts && data.queries && data.relationships) {
+        // Older backend shape: names plus relationships.
+        nodes = [
+          ...data.concepts.map((name, i) => ({ id: `concept_${i}`, name, type: 'concept' })),
+          ...data.queries.map((name, i) => ({ id: `query_${i}`, name, type: 'query' }))
+        ];
+        links = data.relationships.map((r) => ({ source: r.source, target: r.target }));
+      } else if (data && data.nodes && data.links) {
+        nodes = data.nodes;
+        links = data.links;
       }
     } catch (error) {
       console.error('Error fetching graph data:', error);
     }
-    
-    // If no data from API, show empty state
+
     if (nodes.length === 0) {
-      container.innerHTML = `
-        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #666; font-size: 16px;">
-          <div style="margin-bottom: 16px;">📊</div>
-          <div>No graph data available</div>
-          <div style="font-size: 14px; margin-top: 8px;">Check your API endpoint at /api/get-graph</div>
-        </div>
-      `;
+      showMessage('Nothing here yet.', 'Search for something and it will show up here.');
       return;
     }
 
-    // Create SVG
+    // Drop edges whose ends are missing, so d3 doesn't throw.
+    const ids = new Set(nodes.map((n) => n.id));
+    links = links.filter((l) => ids.has(l.source) && ids.has(l.target));
+
     const width = container.clientWidth;
     const height = container.clientHeight;
 
@@ -1443,90 +1137,96 @@ class App {
       .append('svg')
       .attr('width', width)
       .attr('height', height)
-      .call(
-        d3.zoom()
-          .scaleExtent([0.2, 2])
-          .on('zoom', (event) => {
-            g.attr('transform', event.transform);
-          })
-      );
+      .attr('role', 'img')
+      .attr('aria-label', `Memory graph with ${nodes.length} items`);
 
-    // Create a group for all graph elements (for zoom/pan)
-    const g = svg.append('g')
-      .attr('class', 'graph-group');
+    const g = svg.append('g');
+    const zoom = d3.zoom()
+      .scaleExtent([0.2, 2])
+      .on('zoom', (event) => g.attr('transform', event.transform));
+    svg.call(zoom);
 
-    // Draw links (edges)
+    const shortName = (d) => {
+      if (d.type !== 'link') return d.name.length > 40 ? d.name.slice(0, 40) + '...' : d.name;
+      try { return new URL(d.name).hostname.replace(/^www\./, ''); } catch (_) { return d.name; }
+    };
+
     const link = g.append('g')
-      .attr('stroke', '#bbb')
-      .attr('stroke-width', 1.5)
       .selectAll('line')
       .data(links)
       .enter()
-      .append('line');
+      .append('line')
+      .attr('class', 'graph-link');
 
-    // Draw nodes (circles)
     const node = g.append('g')
-      .selectAll('circle')
+      .selectAll('.graph-node')
       .data(nodes)
       .enter()
-      .append('circle')
-      .attr('r', 18)
-      .attr('fill', d => {
-        if (d.type === 'concept') return '#6366f1';   // Indigo
-        if (d.type === 'query')   return '#10b981';   // Emerald
-        if (d.type === 'link')    return '#f59e42';   // Orange
-        return '#3b82f6';
+      .append((d) => document.createElementNS('http://www.w3.org/2000/svg', d.type === 'concept' ? 'rect' : 'circle'))
+      .attr('class', (d) => `graph-node graph-node--${d.type === 'concept' || d.type === 'query' ? d.type : 'link'}`)
+      .each(function (d) {
+        const el = d3.select(this);
+        if (d.type === 'concept') el.attr('width', 14).attr('height', 14);
+        else el.attr('r', d.type === 'query' ? 6 : 3.5);
       })
-      .attr('stroke', '#fff')
-      .attr('stroke-width', 2)
       .call(d3.drag()
         .on('start', dragstarted)
         .on('drag', dragged)
-        .on('end', dragended)
-      );
+        .on('end', dragended));
 
-    // Draw labels
+    node.append('title').text((d) => d.name);
+
     const label = g.append('g')
       .selectAll('text')
       .data(nodes)
       .enter()
       .append('text')
-      .attr('text-anchor', 'middle')
+      .attr('class', (d) => `graph-label${d.type === 'concept' ? ' graph-label--concept' : ''}`)
+      .attr('dx', 10)
       .attr('dy', 4)
-      .attr('font-size', 12)
-      .attr('fill', '#222')
-      .text(d => d.name);
+      .text(shortName);
 
-    // D3 simulation
+    // Click a node: it turns blue, its edges go to full ink. Click it again to clear.
+    let selectedId = null;
+    const select = (id) => {
+      selectedId = selectedId === id ? null : id;
+      const endId = (end) => (typeof end === 'object' ? end.id : end);
+      node.classed('is-selected', (d) => d.id === selectedId);
+      label.classed('is-selected', (d) => d.id === selectedId);
+      link.classed('is-highlighted', (l) => selectedId !== null &&
+        (endId(l.source) === selectedId || endId(l.target) === selectedId));
+    };
+    node.on('click', (event, d) => {
+      event.stopPropagation();
+      select(d.id);
+    });
+
     const simulation = d3.forceSimulation(nodes)
-      .force('link', d3.forceLink(links).id(d => d.id).distance(120))
-      .force('charge', d3.forceManyBody().strength(-400))
+      .force('link', d3.forceLink(links).id((d) => d.id).distance(90))
+      .force('charge', d3.forceManyBody().strength(-260))
       .force('center', d3.forceCenter(width / 2, height / 2))
       .on('tick', ticked);
 
-    // Set initial zoom transform (zoomed out)
-    svg.call(
-      d3.zoom().transform,
-      d3.zoomIdentity.translate(width / 2 * 0.3, height / 2 * 0.3).scale(0.7)
-    );
+    svg.call(zoom.transform, d3.zoomIdentity.translate(width * 0.15, height * 0.15).scale(0.7));
 
     function ticked() {
       link
-        .attr('x1', d => d.source.x)
-        .attr('y1', d => d.source.y)
-        .attr('x2', d => d.target.x)
-        .attr('y2', d => d.target.y);
+        .attr('x1', (d) => d.source.x)
+        .attr('y1', (d) => d.source.y)
+        .attr('x2', (d) => d.target.x)
+        .attr('y2', (d) => d.target.y);
 
-      node
-        .attr('cx', d => d.x)
-        .attr('cy', d => d.y);
+      node.each(function (d) {
+        const el = d3.select(this);
+        if (d.type === 'concept') el.attr('x', d.x - 7).attr('y', d.y - 7);
+        else el.attr('cx', d.x).attr('cy', d.y);
+      });
 
       label
-        .attr('x', d => d.x)
-        .attr('y', d => d.y);
+        .attr('x', (d) => d.x)
+        .attr('y', (d) => d.y);
     }
 
-    // Drag functions
     function dragstarted(event, d) {
       if (!event.active) simulation.alphaTarget(0.3).restart();
       d.fx = d.x;
@@ -1543,56 +1243,6 @@ class App {
     }
   }
 
-  generateNetworkData(isOnline) {
-    if (isOnline) {
-      // Online network topology
-      return {
-        nodes: [
-          { id: 1, name: 'Internet', type: 'internet', x: 150, y: 30 },
-          { id: 2, name: 'Firewall', type: 'security', x: 150, y: 80 },
-          { id: 3, name: 'Router', type: 'router', x: 150, y: 130 },
-          { id: 4, name: 'Switch 1', type: 'switch', x: 80, y: 180 },
-          { id: 5, name: 'Switch 2', type: 'switch', x: 220, y: 180 },
-          { id: 6, name: 'PC 1', type: 'device', x: 50, y: 230 },
-          { id: 7, name: 'PC 2', type: 'device', x: 110, y: 230 },
-          { id: 8, name: 'Server', type: 'server', x: 170, y: 230 },
-          { id: 9, name: 'Laptop', type: 'device', x: 250, y: 230 },
-          { id: 10, name: 'Mobile', type: 'device', x: 290, y: 180 }
-        ],
-        links: [
-          { source: 1, target: 2, strength: 1.0 },
-          { source: 2, target: 3, strength: 1.0 },
-          { source: 3, target: 4, strength: 0.8 },
-          { source: 3, target: 5, strength: 0.8 },
-          { source: 4, target: 6, strength: 0.6 },
-          { source: 4, target: 7, strength: 0.6 },
-          { source: 5, target: 8, strength: 0.7 },
-          { source: 5, target: 9, strength: 0.6 },
-          { source: 3, target: 10, strength: 0.5 }
-        ]
-      };
-    } else {
-      // Offline network topology (local network only)
-      return {
-        nodes: [
-          { id: 1, name: 'Router', type: 'router', x: 150, y: 100 },
-          { id: 2, name: 'Switch', type: 'switch', x: 150, y: 150 },
-          { id: 3, name: 'PC 1', type: 'device', x: 80, y: 200 },
-          { id: 4, name: 'PC 2', type: 'device', x: 150, y: 200 },
-          { id: 5, name: 'Laptop', type: 'device', x: 220, y: 200 },
-          { id: 6, name: 'Printer', type: 'device', x: 150, y: 250 }
-        ],
-        links: [
-          { source: 1, target: 2, strength: 0.8 },
-          { source: 2, target: 3, strength: 0.6 },
-          { source: 2, target: 4, strength: 0.6 },
-          { source: 2, target: 5, strength: 0.6 },
-          { source: 2, target: 6, strength: 0.4 }
-        ]
-      };
-    }
-  }
-
   setupWebview() {
     const webview = document.getElementById('browser-webview');
     const webviewContainer = document.getElementById('webview-container');
@@ -1601,341 +1251,265 @@ class App {
 
     if (!webview || !webviewContainer) return;
 
-    // Handle webview events
-    webview.addEventListener('did-start-loading', () => {
-      if (loadingIndicator) {
-        loadingIndicator.style.display = 'flex';
+    const showLobotomy = () => {
+      const lobotomyUrl = this.getLobotomyUrl();
+      webview.src = lobotomyUrl;
+      const tab = this.tabs[this.activeTabIndex];
+      if (tab) {
+        tab.url = lobotomyUrl;
+        tab.title = LOBOTOMY_TITLE;
+        tab.origin = 'You asked for an AI chat site';
+        this.renderTabs();
       }
+    };
+
+    webview.addEventListener('did-start-loading', () => {
+      if (loadingIndicator) loadingIndicator.style.display = 'block';
     });
 
     webview.addEventListener('did-stop-loading', () => {
-      if (loadingIndicator) {
-        loadingIndicator.style.display = 'none';
-      }
+      if (loadingIndicator) loadingIndicator.style.display = 'none';
       webview.setAttribute('data-ready', 'true');
-      
-      // Update current tab title and URL
-      if (this.tabs[this.activeTabIndex]) {
-        this.tabs[this.activeTabIndex].url = webview.src;
-        this.tabs[this.activeTabIndex].title = webview.getTitle() || 'New Tab';
+
+      const tab = this.tabs[this.activeTabIndex];
+      if (tab) {
+        tab.url = webview.src;
+        tab.title = webview.getTitle() || tab.title || 'New tab';
         this.renderTabs();
       }
     });
 
     webview.addEventListener('did-fail-load', () => {
-      if (loadingIndicator) {
-        loadingIndicator.style.display = 'none';
-      }
+      if (loadingIndicator) loadingIndicator.style.display = 'none';
       console.error('Webview failed to load');
     });
 
-    // Handle URL bar navigation
-    if (urlBarInput) {
-      urlBarInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          let url = urlBarInput.value.trim();
-          
-          // Add protocol if missing
-          if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
-            url = 'https://' + url;
-          }
-          
-          if (url) {
-            // Check for LLM provider easter egg
-            if (this.isLLMProvider(url)) {
-              console.log('🎉 Easter egg triggered! Redirecting to lobotomy memes...');
-              const lobotomyUrl = this.getLobotomyUrl();
-              webview.src = lobotomyUrl;
-              // Update current tab URL
-              if (this.tabs[this.activeTabIndex]) {
-                this.tabs[this.activeTabIndex].url = lobotomyUrl;
-                this.tabs[this.activeTabIndex].title = '🧠 SELF-LOBOTOMY 🧠';
-                this.renderTabs();
-              }
-              return;
-            }
-            
-            // Update current tab URL
-            if (this.tabs[this.activeTabIndex]) {
-              this.tabs[this.activeTabIndex].url = url;
-            }
-            webview.src = url;
-          }
-        }
-      });
-    }
+    // Address bar: an address opens in the current tab; anything with spaces
+    // (or no dot) is a Google search.
+    urlBarInput?.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      const typed = urlBarInput.value.trim();
+      if (!typed) return;
 
-    // Handle navigation controls
-    document.getElementById('back-btn')?.addEventListener('click', () => {
-      if (webview.canGoBack()) {
-        webview.goBack();
+      if (this.isLLMProvider(typed)) {
+        if (this.tabs.length === 0) {
+          this.createTabInGeneralTask(this.getLobotomyUrl(), LOBOTOMY_TITLE, '', 'You asked for an AI chat site');
+        } else {
+          showLobotomy();
+        }
+        this.activateWebview();
+        return;
       }
+
+      let url = typed;
+      if (!/^(https?|about|file):/i.test(typed)) {
+        url = (/\s/.test(typed) || !typed.includes('.'))
+          ? `https://www.google.com/search?q=${encodeURIComponent(typed)}`
+          : `https://${typed}`;
+      }
+
+      const tab = this.tabs[this.activeTabIndex];
+      if (tab) {
+        tab.url = url;
+        tab.origin = 'Opened the address you typed';
+        webview.src = url;
+        this.renderTabs();
+      } else {
+        this.createTabInGeneralTask(url, typed, '', 'Opened the address you typed');
+      }
+      urlBarInput.blur();
+      this.activateWebview();
+    });
+
+    document.getElementById('back-btn')?.addEventListener('click', () => {
+      if (webview.canGoBack()) webview.goBack();
     });
 
     document.getElementById('forward-btn')?.addEventListener('click', () => {
-      if (webview.canGoForward()) {
-        webview.goForward();
-      }
+      if (webview.canGoForward()) webview.goForward();
     });
 
-    document.getElementById('home-btn')?.addEventListener('click', () => {
-      const homeUrl = 'about:blank';
-      if (this.tabs[this.activeTabIndex]) {
-        this.tabs[this.activeTabIndex].url = homeUrl;
-      }
-      webview.src = homeUrl;
-    });
+    // "Start page": back to the query box. Open tabs stay where they are.
+    document.getElementById('home-btn')?.addEventListener('click', () => this.openQueryInput());
 
-    // Update URL bar when webview navigates
     webview.addEventListener('did-navigate', (e) => {
-      if (urlBarInput) {
-        urlBarInput.value = e.url;
-      }
-      // Update current tab URL
-      if (this.tabs[this.activeTabIndex]) {
-        this.tabs[this.activeTabIndex].url = e.url;
-      }
-      
-      // Check for LLM provider easter egg
-      if (this.isLLMProvider(e.url)) {
-        console.log('🎉 Easter egg triggered! Redirecting to lobotomy memes...');
-        const lobotomyUrl = this.getLobotomyUrl();
-        webview.src = lobotomyUrl;
-        // Update tab title and URL
-        if (this.tabs[this.activeTabIndex]) {
-          this.tabs[this.activeTabIndex].url = lobotomyUrl;
-          this.tabs[this.activeTabIndex].title = '🧠 SELF-LOBOTOMY 🧠';
-          this.renderTabs();
-        }
-      }
+      if (urlBarInput) urlBarInput.value = e.url;
+      const tab = this.tabs[this.activeTabIndex];
+      if (tab) tab.url = e.url;
+      if (this.isLLMProvider(e.url)) showLobotomy();
     });
 
     webview.addEventListener('did-navigate-in-page', (e) => {
-      if (urlBarInput) {
-        urlBarInput.value = e.url;
-      }
-      // Update current tab URL
-      if (this.tabs[this.activeTabIndex]) {
-        this.tabs[this.activeTabIndex].url = e.url;
-      }
+      if (urlBarInput) urlBarInput.value = e.url;
+      const tab = this.tabs[this.activeTabIndex];
+      if (tab) tab.url = e.url;
     });
   }
 
+  // Header + tasks panel open together from the top or left edge; the tabs
+  // panel opens from the right edge. Hover, click or keyboard focus on the
+  // edge tabs opens them too. "Keep the panels open" in the menu pins them.
   setupHeaderVisibility() {
     const header = document.querySelector('.app-header');
-    const contentArea = document.querySelector('.content-area');
-    const urlBarInput = document.querySelector('.url-bar__input');
     const sidebar = document.querySelector('.sidebar');
-    const webview = document.getElementById('browser-webview');
-
-    if (!header || !contentArea) return;
-
-    // Start with header hidden by default
-    header.classList.remove('is-visible');
-    sidebar?.classList.remove('is-visible');
-
-    // Simple state tracking
-    let isHeaderVisible = false;
-    let isSidebarVisible = false;
-    let isRightSidebarVisible = false;
-    let isUrlBarFocused = false;
-    let isMouseInHeader = false;
-    let isMouseInSidebar = false;
-    let isMouseInRightSidebar = false;
-    let hideTimer = null;
-    
-    // Make state accessible to menu button
-    this.isHeaderVisible = () => isHeaderVisible;
-    this.isSidebarVisible = () => isSidebarVisible;
-    this.isRightSidebarVisible = () => isRightSidebarVisible;
-    this.setHeaderVisible = (visible) => { isHeaderVisible = visible; };
-    this.setSidebarVisible = (visible) => { isSidebarVisible = visible; };
-    this.setRightSidebarVisible = (visible) => { isRightSidebarVisible = visible; };
-    const HIDE_DELAY = 750; // Soft delay before hiding bars
-    // Function to show both header and sidebar
-    const showBoth = () => {
-      if (!isHeaderVisible) {
-        header.classList.add('is-visible');
-        isHeaderVisible = true;
-      }
-      if (!isSidebarVisible) {
-        sidebar?.classList.add('is-visible');
-        isSidebarVisible = true;
-      }
-      // Clear any existing hide timer
-      if (hideTimer) {
-        clearTimeout(hideTimer);
-        hideTimer = null;
-      }
-      // Update webview position if active
-      if (this.hasActiveWebview) {
-        this.updateWebviewPosition();
-      }
-    };
-
-    // Function to show right sidebar
-    const showRightSidebar = () => {
-      const rightSidebar = document.querySelector('.right-sidebar');
-      if (!isRightSidebarVisible && rightSidebar) {
-        rightSidebar.classList.add('is-visible');
-        isRightSidebarVisible = true;
-      }
-      // Clear any existing hide timer
-      if (hideTimer) {
-        clearTimeout(hideTimer);
-        hideTimer = null;
-      }
-      // Update webview position if active
-      if (this.hasActiveWebview) {
-        this.updateWebviewPosition();
-      }
-    };
-
-    // Function to hide both header and sidebar
-    const hideBoth = () => {
-      if (isHeaderVisible && !isUrlBarFocused && !isMouseInHeader && !isMouseInSidebar) {
-        header.classList.remove('is-visible');
-        isHeaderVisible = false;
-      }
-      if (isSidebarVisible && !isMouseInSidebar && !isMouseInHeader) {
-        sidebar?.classList.remove('is-visible');
-        isSidebarVisible = false;
-      }
-      // Update webview position if active
-      if (this.hasActiveWebview) {
-        this.updateWebviewPosition();
-      }
-    };
-
-    // Function to hide right sidebar
-    const hideRightSidebar = () => {
-      const rightSidebar = document.querySelector('.right-sidebar');
-      if (isRightSidebarVisible && !isMouseInRightSidebar && rightSidebar) {
-        rightSidebar.classList.remove('is-visible');
-        isRightSidebarVisible = false;
-      }
-      // Update webview position if active
-      if (this.hasActiveWebview) {
-        this.updateWebviewPosition();
-      }
-    };
-
-    // Function to hide header (only if not focused or hovering)
-    const hideHeader = () => {
-      if (isHeaderVisible && !isUrlBarFocused && !isMouseInHeader && !isMouseInSidebar) {
-        header.classList.remove('is-visible');
-        isHeaderVisible = false;
-      }
-    };
-
-    // Function to start hide timer
-    const startHideTimer = () => {
-      if (hideTimer) {
-        clearTimeout(hideTimer);
-      }
-      hideTimer = setTimeout(hideBoth, HIDE_DELAY);
-    };
-
-    // Show header when mouse is near the top edge
-    document.addEventListener('mousemove', (e) => {
-      const distanceFromTop = e.clientY;
-      const shouldShowHeader = distanceFromTop <= 5;
-      
-      if (shouldShowHeader && !isHeaderVisible) {
-        showBoth();
-      } else if (!shouldShowHeader && isHeaderVisible && !isMouseInHeader && !isUrlBarFocused) {
-        startHideTimer();
-      }
-    });
-
-    // Keep header visible when URL bar is focused
-    urlBarInput?.addEventListener('focus', () => {
-      isUrlBarFocused = true;
-      showBoth();
-    });
-
-    urlBarInput?.addEventListener('blur', () => {
-      isUrlBarFocused = false;
-      if (!isMouseInHeader) {
-        startHideTimer();
-      }
-    });
-
-    // Keep header visible when hovering over it
-    header.addEventListener('mouseenter', () => {
-      isMouseInHeader = true;
-      showBoth();
-    });
-
-    header.addEventListener('mouseleave', () => {
-      isMouseInHeader = false;
-      if (!isUrlBarFocused) {
-        startHideTimer();
-      }
-    });
-
-    // Sidebar visibility (linked with header)
-    document.addEventListener('mousemove', (e) => {
-      const distanceFromLeft = e.clientX;
-      const distanceFromRight = window.innerWidth - e.clientX;
-      const distanceFromTop = e.clientY;
-      const shouldShowSidebar = distanceFromLeft <= 5;
-      
-      // Dynamic right sidebar trigger zone: 5px when closed, 200px when open
-      const rightSidebarTriggerZone = isRightSidebarVisible ? 200 : 5;
-      const shouldShowRightSidebar = distanceFromRight <= rightSidebarTriggerZone;
-      
-      const shouldShowHeader = distanceFromTop <= 5;
-      const shouldKeepSidebarVisible = isSidebarVisible && distanceFromLeft <= 200; // Full sidebar width
-      
-      // Show both header and sidebar when near top-left corner
-      if ((shouldShowHeader || shouldShowSidebar) && (!isHeaderVisible || !isSidebarVisible)) {
-        showBoth();
-      } else if (!shouldShowHeader && !shouldShowSidebar && !isMouseInHeader && !isMouseInSidebar && !isUrlBarFocused) {
-        // Hide both when mouse is away from both areas
-        startHideTimer();
-      }
-
-      // Show right sidebar when near right edge
-      if (shouldShowRightSidebar && !isRightSidebarVisible) {
-        showRightSidebar();
-      } else if (!shouldShowRightSidebar && isRightSidebarVisible && !isMouseInRightSidebar) {
-        hideRightSidebar();
-      }
-    });
-
-    // Keep sidebar visible when hovering over it
-    sidebar?.addEventListener('mouseenter', () => {
-      isMouseInSidebar = true;
-      showBoth();
-    });
-
-    sidebar?.addEventListener('mouseleave', () => {
-      isMouseInSidebar = false;
-      // Sidebar will be hidden by the mousemove event if mouse is not near left edge
-    });
-
-    // Keep right sidebar visible when hovering over it
     const rightSidebar = document.querySelector('.right-sidebar');
-    rightSidebar?.addEventListener('mouseenter', () => {
-      isMouseInRightSidebar = true;
-      showRightSidebar();
-    });
+    const urlBarInput = document.querySelector('.url-bar__input');
+    if (!header) return;
 
-    rightSidebar?.addEventListener('mouseleave', () => {
-      isMouseInRightSidebar = false;
-      // Right sidebar will be hidden by the mousemove event if mouse is not near right edge
-    });
+    const EDGE_PX = 5;
+    const HIDE_DELAY_MS = 750;
 
-    // Keyboard shortcut to close right sidebar (Escape key)
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && isRightSidebarVisible) {
-        hideRightSidebar();
+    let headerOn = false;
+    let leftOn = false;
+    let rightOn = false;
+    let pinned = false;
+    let inHeader = false;
+    let inLeft = false;
+    let inRight = false;
+    let focusInHeader = false;
+    let focusInLeft = false;
+    let focusInRight = false;
+    let hideTimer = null;
+
+    const sync = () => {
+      header.classList.toggle('is-visible', headerOn);
+      sidebar?.classList.toggle('is-visible', leftOn);
+      rightSidebar?.classList.toggle('is-visible', rightOn);
+      document.body.classList.toggle('tasks-open', leftOn);
+      document.body.classList.toggle('tabs-open', rightOn);
+      if (this.hasActiveWebview) this.updateWebviewPosition();
+    };
+
+    const cancelHide = () => {
+      clearTimeout(hideTimer);
+      hideTimer = null;
+    };
+
+    const showBoth = () => {
+      cancelHide();
+      if (!headerOn || !leftOn) {
+        headerOn = true;
+        leftOn = true;
+        sync();
+      }
+    };
+
+    const hideBoth = () => {
+      if (pinned) return;
+      const keep = inHeader || inLeft || focusInHeader || focusInLeft || document.activeElement === urlBarInput;
+      if (keep || (!headerOn && !leftOn)) return;
+      headerOn = false;
+      leftOn = false;
+      sync();
+    };
+
+    const startHideTimer = () => {
+      if (hideTimer || pinned) return;
+      hideTimer = setTimeout(() => {
+        hideTimer = null;
+        hideBoth();
+      }, HIDE_DELAY_MS);
+    };
+
+    const showRight = () => {
+      if (!rightOn) {
+        rightOn = true;
+        sync();
+      }
+    };
+
+    const hideRight = (force = false) => {
+      if (!rightOn || (!force && (pinned || inRight || focusInRight))) return;
+      rightOn = false;
+      sync();
+    };
+
+    this.panelsPinned = false;
+    this.setPanelsPinned = (on) => {
+      pinned = !!on;
+      this.panelsPinned = pinned;
+      if (pinned) {
+        showBoth();
+        showRight();
+      } else {
+        startHideTimer();
+        hideRight();
+      }
+    };
+
+    document.addEventListener('mousemove', (e) => {
+      const nearTop = e.clientY <= EDGE_PX;
+      const nearLeft = e.clientX <= EDGE_PX;
+      if (nearTop || nearLeft) {
+        showBoth();
+      } else if ((headerOn || leftOn) && !inHeader && !inLeft) {
+        startHideTimer();
+      }
+
+      const fromRight = window.innerWidth - e.clientX;
+      const rightZone = rightOn ? SIDEBAR_WIDTH_PX : EDGE_PX;
+      if (fromRight <= rightZone) {
+        showRight();
+      } else {
+        hideRight();
       }
     });
 
-    // Setup right sidebar URL input handling
+    const track = (el, onEnter, onLeave, setFocus) => {
+      if (!el) return;
+      el.addEventListener('mouseenter', onEnter);
+      el.addEventListener('mouseleave', onLeave);
+      el.addEventListener('focusin', () => { setFocus(true); onEnter(); });
+      el.addEventListener('focusout', (e) => {
+        setFocus(!!(e.relatedTarget && el.contains(e.relatedTarget)));
+        onLeave();
+      });
+    };
+
+    track(header,
+      () => { inHeader = true; showBoth(); },
+      () => { inHeader = false; startHideTimer(); },
+      (v) => { focusInHeader = v; });
+    track(sidebar,
+      () => { inLeft = true; showBoth(); },
+      () => { inLeft = false; startHideTimer(); },
+      (v) => { focusInLeft = v; });
+    track(rightSidebar,
+      () => { inRight = true; showRight(); },
+      () => { inRight = false; },
+      (v) => { focusInRight = v; });
+
+    urlBarInput?.addEventListener('blur', startHideTimer);
+
+    // Visible handles for the hidden panels.
+    const leftTab = document.querySelector('.edge-tab--left');
+    const rightTab = document.querySelector('.edge-tab--right');
+    ['mouseenter', 'click', 'focus'].forEach((type) => {
+      leftTab?.addEventListener(type, () => {
+        showBoth();
+        if (type !== 'mouseenter') sidebar?.querySelector('.sidebar__add-tab')?.focus();
+      });
+      rightTab?.addEventListener(type, () => {
+        showRight();
+        if (type !== 'mouseenter') rightSidebar?.querySelector('.right-sidebar__url-input')?.focus();
+      });
+    });
+
+    // Esc closes open panels (unless pinned).
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || pinned) return;
+      if (rightOn) hideRight(true);
+      if (headerOn || leftOn) {
+        const active = document.activeElement;
+        if (active && (header.contains(active) || sidebar?.contains(active))) active.blur();
+        focusInHeader = false;
+        focusInLeft = false;
+        cancelHide();
+        hideBoth();
+      }
+    });
+
     this.setupRightSidebarInput();
   }
 
@@ -1944,162 +1518,38 @@ class App {
     const autocomplete = document.querySelector('.right-sidebar__autocomplete');
     if (!urlInput || !autocomplete) return;
 
-    const searchEngines = [
-      { name: 'google', description: 'Google Search', icon: '🔍' },
-      { name: 'bing', description: 'Bing Search', icon: '🔎' },
-      { name: 'youtube', description: 'YouTube Search', icon: '📺' },
-      { name: 'github', description: 'GitHub Search', icon: '🐙' },
-      { name: 'stackoverflow', description: 'Stack Overflow Search', icon: '💻' },
-      { name: 'reddit', description: 'Reddit Search', icon: '🤖' },
-      { name: 'wikipedia', description: 'Wikipedia Search', icon: '📚' },
-      { name: 'arxiv', description: 'arXiv Papers', icon: '📄' },
-      { name: 'twitter', description: 'Twitter Search', icon: '🐦' },
-      { name: 'linkedin', description: 'LinkedIn Search', icon: '💼' },
-      { name: 'amazon', description: 'Amazon Search', icon: '📦' },
-      { name: 'ebay', description: 'eBay Search', icon: '🛒' },
-      { name: 'spotify', description: 'Spotify Search', icon: '🎵' },
-      { name: 'netflix', description: 'Netflix Search', icon: '🎬' },
-      { name: 'medium', description: 'Medium Search', icon: '📝' },
-      { name: 'quora', description: 'Quora Search', icon: '❓' },
-      { name: 'discord', description: 'Discord Search', icon: '💬' },
-      { name: 'slack', description: 'Slack Search', icon: '💬' },
-      { name: 'notion', description: 'Notion Search', icon: '📋' },
-      { name: 'figma', description: 'Figma Search', icon: '🎨' }
-    ];
-
     let selectedIndex = -1;
     let filteredSuggestions = [];
 
-    const showAutocomplete = (query) => {
-      if (!query.startsWith('@')) {
-        autocomplete.style.display = 'none';
-        return;
-      }
+    const run = async (text) => {
+      urlInput.value = '';
+      hideAutocomplete();
+      await this.processUrlInput(text);
+      if (this.allTabs().length > 0) this.activateWebview();
+    };
 
-      const searchTerm = query.substring(1).toLowerCase();
-      const suggestions = [];
+    const fillWith = (text) => {
+      urlInput.value = text;
+      hideAutocomplete();
+      urlInput.focus();
+    };
 
-      // Add command suggestions first
-      const commands = [
-        { name: 'duplicate', description: 'Duplicate a tab', icon: '📋' },
-        { name: 'close', description: 'Close current tab', icon: '❌' },
-        { name: 'closeall', description: 'Close all tabs in task', icon: '🗑️' },
-        { name: 'newtask', description: 'Create new task', icon: '➕' },
-        { name: 'closetask', description: 'Close current task', icon: '📁' }
-      ];
-
-      const matchingCommands = commands.filter(cmd => 
-        cmd.name.toLowerCase().includes(searchTerm) ||
-        cmd.description.toLowerCase().includes(searchTerm)
-      );
-
-      matchingCommands.forEach(cmd => {
-        suggestions.push({
-          type: 'command',
-          name: cmd.name,
-          description: cmd.description,
-          icon: cmd.icon
-        });
-      });
-
-      // Add search engines
-      const matchingEngines = searchEngines.filter(engine => 
-        engine.name.toLowerCase().includes(searchTerm) ||
-        engine.description.toLowerCase().includes(searchTerm)
-      );
-      
-      matchingEngines.forEach(engine => {
-        suggestions.push({
-          type: 'engine',
-          name: engine.name,
-          description: engine.description,
-          icon: engine.icon
-        });
-      });
-
-      // Add tab duplication if it starts with @duplicate
-      if (searchTerm.startsWith('duplicate')) {
-        const activeTask = this.tasks[this.activeTaskIndex];
-        if (activeTask && activeTask.tabs.length > 0) {
-          const duplicateQuery = searchTerm.substring(9).trim().toLowerCase();
-          activeTask.tabs.forEach(tab => {
-            if (tab.title.toLowerCase().includes(duplicateQuery) || 
-                tab.url.toLowerCase().includes(duplicateQuery)) {
-              suggestions.push({
-                type: 'duplicate',
-                name: tab.title,
-                description: 'Duplicate this tab',
-                icon: '📋',
-                tab: tab
-              });
-            }
-          });
-        }
-      }
-
+    const showAutocomplete = (text) => {
+      const suggestions = this.buildSuggestions(text);
       if (suggestions.length === 0) {
-        autocomplete.style.display = 'none';
+        hideAutocomplete();
         return;
       }
 
       filteredSuggestions = suggestions;
       autocomplete.innerHTML = '';
-      
-            suggestions.forEach((suggestion, index) => {
-        const item = document.createElement('div');
-        item.className = 'right-sidebar__autocomplete-item';
-        
-        if (suggestion.type === 'command') {
-          item.innerHTML = `
-            <div class="right-sidebar__autocomplete-icon">${suggestion.icon}</div>
-            <div class="right-sidebar__autocomplete-content">
-              <div class="right-sidebar__autocomplete-engine">@${suggestion.name}</div>
-              <div class="right-sidebar__autocomplete-description">${suggestion.description}</div>
-            </div>
-          `;
-          
-          item.addEventListener('click', () => {
-            const currentValue = urlInput.value;
-            const beforeAt = currentValue.substring(0, currentValue.indexOf('@'));
-            urlInput.value = beforeAt + `@${suggestion.name} `;
-            autocomplete.style.display = 'none';
-            urlInput.focus();
-          });
-        } else if (suggestion.type === 'engine') {
-          item.innerHTML = `
-            <div class="right-sidebar__autocomplete-icon">${suggestion.icon}</div>
-            <div class="right-sidebar__autocomplete-content">
-              <div class="right-sidebar__autocomplete-engine">@${suggestion.name}</div>
-              <div class="right-sidebar__autocomplete-description">${suggestion.description}</div>
-            </div>
-          `;
-          
-          item.addEventListener('click', () => {
-            const currentValue = urlInput.value;
-            const beforeAt = currentValue.substring(0, currentValue.indexOf('@'));
-            urlInput.value = beforeAt + `@${suggestion.name} `;
-            autocomplete.style.display = 'none';
-            urlInput.focus();
-          });
-        } else if (suggestion.type === 'duplicate') {
-          item.innerHTML = `
-            <div class="right-sidebar__autocomplete-icon">${suggestion.icon}</div>
-            <div class="right-sidebar__autocomplete-content">
-              <div class="right-sidebar__autocomplete-engine">@duplicate</div>
-              <div class="right-sidebar__autocomplete-description">${suggestion.name}</div>
-            </div>
-          `;
-          
-          item.addEventListener('click', async () => {
-            // Fill in the command and execute it
-            urlInput.value = `@duplicate ${suggestion.name}`;
-            await this.processUrlInput(urlInput.value);
-            urlInput.value = '';
-            autocomplete.style.display = 'none';
-            urlInput.focus();
-          });
-        }
-
+      suggestions.forEach((suggestion) => {
+        const item = this.suggestionElement('right-sidebar__autocomplete-item', suggestion);
+        item.addEventListener('mousedown', (e) => e.preventDefault());
+        item.addEventListener('click', () => {
+          if (suggestion.type === 'duplicate') run(`@duplicate ${suggestion.name}`);
+          else fillWith(`@${suggestion.name} `);
+        });
         autocomplete.appendChild(item);
       });
 
@@ -2113,780 +1563,288 @@ class App {
     };
 
     const selectAutocompleteItem = (direction) => {
-      if (filteredSuggestions.length === 0) return;
-
       const items = autocomplete.querySelectorAll('.right-sidebar__autocomplete-item');
-      
-      if (selectedIndex >= 0) {
-        items[selectedIndex].classList.remove('is-selected');
-      }
-
+      if (items.length === 0) return;
+      if (selectedIndex >= 0) items[selectedIndex].classList.remove('is-selected');
       if (direction === 'up') {
         selectedIndex = selectedIndex <= 0 ? items.length - 1 : selectedIndex - 1;
       } else {
         selectedIndex = selectedIndex >= items.length - 1 ? 0 : selectedIndex + 1;
       }
-
       items[selectedIndex].classList.add('is-selected');
       items[selectedIndex].scrollIntoView({ block: 'nearest' });
     };
 
-    urlInput.addEventListener('input', (e) => {
-      showAutocomplete(e.target.value);
-    });
+    urlInput.addEventListener('input', (e) => showAutocomplete(e.target.value));
 
     urlInput.addEventListener('keydown', async (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
-        
-        // If autocomplete is visible and an item is selected, use that
-        if (autocomplete.style.display === 'block' && selectedIndex >= 0 && filteredSuggestions.length > 0) {
-          const selectedSuggestion = filteredSuggestions[selectedIndex];
-          
-          if (selectedSuggestion.type === 'engine') {
-            // Fill in the search engine
-            const currentValue = urlInput.value;
-            const beforeAt = currentValue.substring(0, currentValue.indexOf('@'));
-            urlInput.value = beforeAt + `@${selectedSuggestion.name} `;
-            autocomplete.style.display = 'none';
-            urlInput.focus();
-          } else if (selectedSuggestion.type === 'duplicate') {
-            // Fill in and execute the duplicate command
-            urlInput.value = `@duplicate ${selectedSuggestion.name}`;
-            await this.processUrlInput(urlInput.value);
-            urlInput.value = '';
-            autocomplete.style.display = 'none';
-            urlInput.focus();
-          }
-        } else {
-          // Process the current input normally
-          const input = e.target.value.trim();
-          
-          if (!input) return;
-          
-          // Clear the input and hide autocomplete
-          e.target.value = '';
-          hideAutocomplete();
-          
-          // Process the input
-          await this.processUrlInput(input);
+        const picked = autocomplete.style.display === 'block' && selectedIndex >= 0
+          ? filteredSuggestions[selectedIndex] : null;
+        if (picked) {
+          if (picked.type === 'duplicate') run(`@duplicate ${picked.name}`);
+          else fillWith(`@${picked.name} `);
+          return;
         }
+        const text = urlInput.value.trim();
+        if (text) run(text);
       } else if (e.key === 'Escape') {
         hideAutocomplete();
-        e.target.blur();
+        urlInput.blur();
       } else if (e.key === 'ArrowDown') {
         e.preventDefault();
         selectAutocompleteItem('down');
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
         selectAutocompleteItem('up');
-      } else if (e.key === 'Tab') {
+      } else if (e.key === 'Tab' && urlInput.value.startsWith('@')) {
         e.preventDefault();
-        handleTabCompletion();
+        const completion = this.completeSuggestion(urlInput.value);
+        if (!completion) showAutocomplete(urlInput.value);
+        else if (completion.type === 'duplicate') run(completion.text);
+        else fillWith(completion.text);
       }
     });
 
-    const handleTabCompletion = async () => {
-      const currentValue = urlInput.value;
-      
-      if (!currentValue.startsWith('@')) {
-        return;
-      }
-
-      const searchTerm = currentValue.substring(1).toLowerCase();
-      
-      // Find matching search engines
-      const matchingEngines = searchEngines.filter(engine => 
-        engine.name.toLowerCase().startsWith(searchTerm)
-      );
-
-      // Find matching duplicate commands
-      let matchingDuplicates = [];
-      if (searchTerm.startsWith('duplicate')) {
-        const activeTask = this.tasks[this.activeTaskIndex];
-        if (activeTask && activeTask.tabs.length > 0) {
-          const duplicateQuery = searchTerm.substring(9).trim().toLowerCase();
-          activeTask.tabs.forEach(tab => {
-            if (tab.title.toLowerCase().startsWith(duplicateQuery) || 
-                tab.url.toLowerCase().includes(duplicateQuery)) {
-              matchingDuplicates.push({
-                type: 'duplicate',
-                name: tab.title,
-                tab: tab
-              });
-            }
-          });
-        }
-      }
-
-      // If there's exactly one match, complete it
-      if (matchingEngines.length === 1) {
-        const engine = matchingEngines[0];
-        const beforeAt = currentValue.substring(0, currentValue.indexOf('@'));
-        urlInput.value = beforeAt + `@${engine.name} `;
-        return;
-      }
-
-      if (matchingDuplicates.length === 1) {
-        const duplicate = matchingDuplicates[0];
-        const beforeAt = currentValue.substring(0, currentValue.indexOf('@'));
-        urlInput.value = beforeAt + `@duplicate ${duplicate.name}`;
-        // Execute the duplicate command immediately
-        await this.processUrlInput(urlInput.value);
-        urlInput.value = '';
-        return;
-      }
-
-      // If multiple matches, show autocomplete
-      if (matchingEngines.length > 1 || matchingDuplicates.length > 1) {
-        showAutocomplete(currentValue);
-      }
-    };
-
-    // Hide autocomplete when clicking outside
     document.addEventListener('click', (e) => {
-      if (!e.target.closest('.right-sidebar__new-tab-input')) {
-        hideAutocomplete();
-      }
+      if (!e.target.closest('.right-sidebar__new-tab-input')) hideAutocomplete();
     });
 
-    // Hide autocomplete when input loses focus
-    urlInput.addEventListener('blur', () => {
-      setTimeout(() => {
-        hideAutocomplete();
-      }, 150);
-    });
-    
-
+    urlInput.addEventListener('blur', () => setTimeout(hideAutocomplete, 150));
   }
 
-  // Check if URL is an LLM provider for easter egg
-  isLLMProvider(url) {
-    const llmProviders = [
-      'chat.com',
-      'chatgpt.com',
-      'chatgpt',
-      'openai.com',
-      'openai',
-      'claude.ai',
-      'claude',
-      'anthropic.com',
-      'anthropic',
-      'bard.google.com',
-      'bard',
-      'gemini.google.com',
-      'gemini',
-      'bing.com/chat',
-      'copilot.microsoft.com',
-      'copilot',
-      'perplexity.ai',
-      'perplexity',
-      'poe.com',
-      'poe',
-      'character.ai',
-      'character',
-      'replika.com',
-      'replika',
-      'jasper.ai',
-      'jasper',
-      'writesonic.com',
-      'writesonic',
-      'copy.ai',
-      'copy',
-      'rytr.me',
-      'rytr',
-      'simplified.co',
-      'simplified',
-      'contentbot.ai',
-      'contentbot',
-      'peppertype.ai',
-      'peppertype'
-    ];
-    
-    const urlLower = url.toLowerCase();
-    const isMatch = llmProviders.some(provider => urlLower.includes(provider));
-    console.log('🔍 Checking URL:', url, 'for LLM providers. Match:', isMatch);
-    return isMatch;
-  }
+  // Team joke: real navigation to a chat product goes to lobotomy.html.
+  // Matches a URL whose hostname is (or is under) a chat product's domain, or a
+  // query that is exactly a product name or domain. Searching "claude shannon
+  // information theory", or a search URL that merely contains a name, does not.
+  isLLMProvider(input) {
+    const raw = String(input || '').trim().toLowerCase();
+    if (!raw) return false;
 
-  // Create lobotomy meme page as data URL
-  getLobotomyUrl() {
-    const lobotomyHTML = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lobotomy Memes</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 20px;
-            background: #000;
-            color: #fff;
-            font-family: Arial, sans-serif;
-            text-align: center;
-        }
-        
-        h1 {
-            font-size: 3em;
-            margin-bottom: 30px;
-            color: #ff6b6b;
-        }
-        
-        .meme-container {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 20px;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        
-        .meme-item {
-            max-width: 300px;
-            border: 3px solid #ff6b6b;
-            border-radius: 10px;
-            overflow: hidden;
-            transition: transform 0.3s ease;
-        }
-        
-        .meme-item:hover {
-            transform: scale(1.05);
-        }
-        
-        .meme-item img {
-            width: 100%;
-            height: auto;
-            display: block;
-        }
-        
-        .message {
-            font-size: 1.5em;
-            margin: 30px 0;
-            color: #ffd93d;
-        }
-    </style>
-</head>
-<body>
-    <h1>🧠 SELF-LOBOTOMY 🧠</h1>
-    <div class="message">You've been lobotomized! 🤪</div>
-    
-    <div class="meme-container">
-        <div class="meme-item">
-            <img src="https://i.etsystatic.com/27207670/r/il/2f0c9d/5883052442/il_fullxfull.5883052442_gjy7.jpg" alt="Lobotomy Meme 1">
-        </div>
-        
-        <div class="meme-item">
-            <img src="https://m.media-amazon.com/images/I/61pNqWhfN5L.jpg" alt="Lobotomy Meme 2">
-        </div>
-        
-        <div class="meme-item">
-            <img src="https://ih1.redbubble.net/image.5027067807.8235/flat,750x,075,f-pad,750x1000,f8f8f8.u3.jpg" alt="Lobotomy Meme 3">
-        </div>
-        
-        <div class="meme-item">
-            <img src="https://i.imgflip.com/87g61e.jpg" alt="Lobotomy Meme 4">
-        </div>
-        
-        <div class="meme-item">
-            <img src="https://i.etsystatic.com/12176547/r/il/813637/4505930776/il_1080xN.4505930776_psz9.jpg" alt="Lobotomy Meme 5">
-        </div>
-        
-        <div class="meme-item">
-            <img src="https://preview.redd.it/comets-max-barrier-has-us-all-acting-like-fiends-for-invites-v0-xrvqls4eqdcf1.png?width=640&crop=smart&auto=webp&s=48f9b8c5a7c94a94f242a27160908a0f7af240ab" alt="Lobotomy Meme 6">
-        </div>
-    </div>
-    
-    <div class="message">Welcome to the lobotomy club! 🎉</div>
-</body>
-</html>`;
-    
-    return 'data:text/html;charset=utf-8,' + encodeURIComponent(lobotomyHTML);
-  }
+    if (LLM_CHAT_NAMES.has(raw.replace(/\s+/g, ' '))) return true;
+    if (/\s/.test(raw)) return false; // a phrase, not an address
 
-  async processUrlInput(input) {
-    // Check if input contains delimiters for multiple tabs
-    const delimiters = ['|', ';', ','];
-    let hasDelimiter = false;
-    let delimiter = null;
-    
-    for (const delim of delimiters) {
-      if (input.includes(delim)) {
-        hasDelimiter = true;
-        delimiter = delim;
-        break;
-      }
+    let url;
+    try {
+      url = new URL(/^[a-z][a-z0-9+.-]*:\/\//.test(raw) ? raw : `https://${raw}`);
+    } catch (_) {
+      return false;
     }
-    
-    if (hasDelimiter) {
-      // Split by delimiter and process each part
-      const parts = input.split(delimiter).map(part => part.trim()).filter(part => part.length > 0);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
+
+    const host = url.hostname.replace(/^www\./, '');
+    if (host === 'bing.com' && url.pathname.startsWith('/chat')) return true;
+    return LLM_CHAT_DOMAINS.some((domain) => host === domain || host.endsWith(`.${domain}`));
+  }
+
+  // lobotomy.html sits next to index.html, so it is same-origin and loads in
+  // the page area in both Electron and a plain browser.
+  getLobotomyUrl() {
+    return new URL('lobotomy.html', window.location.href).href;
+  }
+
+  // Input from the tabs panel and the query box's "@..." / address path.
+  // "a | b" (or ; ,) opens several. Everything here lands in General except
+  // the @-commands, which act on the task you are in.
+  async processUrlInput(input) {
+    const delimiter = ['|', ';', ','].find((d) => input.includes(d));
+    if (delimiter) {
+      const parts = input.split(delimiter).map((part) => part.trim()).filter(Boolean);
       for (const part of parts) {
         await this.processUrlInput(part);
       }
       return;
     }
 
-    // Check if it's a command
-    const commandMatch = input.match(/^@(\w+)(?:\s+(.+))?$/);
-    if (commandMatch) {
-      const command = commandMatch[1].toLowerCase();
-      const argument = commandMatch[2] || '';
+    const atMatch = input.match(/^@(\w+)(?:\s+(.+))?$/);
+    if (atMatch) {
+      const name = atMatch[1].toLowerCase();
+      const argument = (atMatch[2] || '').trim();
 
-      switch (command) {
-        case 'duplicate':
-          if (argument) {
-            const activeTask = this.tasks[this.activeTaskIndex];
-            if (activeTask) {
-              const matchingTab = activeTask.tabs.find(tab => 
-                tab.title.toLowerCase().includes(argument.toLowerCase()) ||
-                tab.url.toLowerCase().includes(argument.toLowerCase())
-              );
-              if (matchingTab) {
-                this.duplicateTab(matchingTab);
-                return;
-              }
-            }
-            console.error('No matching tab found for duplication:', argument);
-            return;
-          }
-          break;
-
+      switch (name) {
+        case 'duplicate': {
+          if (!argument) return;
+          const wanted = argument.toLowerCase();
+          const match = this.tabs.find((tab) =>
+            tab.title.toLowerCase().includes(wanted) || tab.url.toLowerCase().includes(wanted));
+          if (match) this.duplicateTab(match);
+          return;
+        }
         case 'close':
-          if (this.tasks[this.activeTaskIndex] && this.tasks[this.activeTaskIndex].tabs.length > 1) {
-            this.closeTab(this.activeTabIndex);
-            return;
-          }
-          break;
-
-        case 'closeall':
-          const activeTask = this.tasks[this.activeTaskIndex];
-          if (activeTask) {
-            activeTask.tabs = [];
+          this.closeTab(this.activeTabIndex);
+          return;
+        case 'closeall': {
+          const task = this.activeTask;
+          if (task) {
+            task.tabs = [];
             this.activeTabIndex = 0;
+            const webview = document.getElementById('browser-webview');
+            if (webview) webview.src = 'about:blank';
+            this.renderTasks();
             this.renderTabs();
-            return;
+            this.showStartPageIfEmpty();
           }
-          break;
-
+          return;
+        }
         case 'newtask':
-          this.createTask('New Task');
+          this.createTask('New task');
           return;
-
         case 'closetask':
-          if (this.tasks.length > 0) {
-            this.closeTask(this.activeTaskIndex);
-          }
+          if (!this.isGeneralTaskActive) this.closeTask(this.activeTaskIndex);
           return;
-      }
-    }
-
-    // Check if it's a search engine command (@engine or @engine query)
-    const searchMatch = input.match(/^@(\w+)(?:\s+(.+))?$/);
-    if (searchMatch) {
-      const engine = searchMatch[1].toLowerCase();
-      const query = searchMatch[2] || '';
-      
-      let searchUrl = '';
-      let tabTitle = '';
-      
-      if (query) {
-        // Has query - do search
-        switch (engine) {
-          case 'google':
-            searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
-            break;
-          case 'bing':
-            searchUrl = `https://www.bing.com/search?q=${encodeURIComponent(query)}`;
-            break;
-
-          case 'youtube':
-            searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
-            break;
-          case 'github':
-            searchUrl = `https://github.com/search?q=${encodeURIComponent(query)}`;
-            break;
-          case 'stackoverflow':
-            searchUrl = `https://stackoverflow.com/search?q=${encodeURIComponent(query)}`;
-            break;
-          case 'reddit':
-            searchUrl = `https://www.reddit.com/search/?q=${encodeURIComponent(query)}`;
-            break;
-          case 'wikipedia':
-            searchUrl = `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(query)}`;
-            break;
-                  case 'arxiv':
-          searchUrl = `https://arxiv.org/search/?query=${encodeURIComponent(query)}&searchtype=all&source=header`;
-          break;
-        case 'twitter':
-          searchUrl = `https://twitter.com/search?q=${encodeURIComponent(query)}`;
-          break;
-        case 'linkedin':
-          searchUrl = `https://www.linkedin.com/search/results/all/?keywords=${encodeURIComponent(query)}`;
-          break;
-        case 'amazon':
-          searchUrl = `https://www.amazon.com/s?k=${encodeURIComponent(query)}`;
-          break;
-        case 'ebay':
-          searchUrl = `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(query)}`;
-          break;
-        case 'spotify':
-          searchUrl = `https://open.spotify.com/search/${encodeURIComponent(query)}`;
-          break;
-        case 'netflix':
-          searchUrl = `https://www.netflix.com/search?q=${encodeURIComponent(query)}`;
-          break;
-        case 'medium':
-          searchUrl = `https://medium.com/search?q=${encodeURIComponent(query)}`;
-          break;
-        case 'quora':
-          searchUrl = `https://www.quora.com/search?q=${encodeURIComponent(query)}`;
-          break;
-        case 'discord':
-          searchUrl = `https://discord.com/search?q=${encodeURIComponent(query)}`;
-          break;
-        case 'slack':
-          searchUrl = `https://slack.com/search?q=${encodeURIComponent(query)}`;
-          break;
-        case 'notion':
-          searchUrl = `https://www.notion.so/search?q=${encodeURIComponent(query)}`;
-          break;
-        case 'figma':
-          searchUrl = `https://www.figma.com/search?model_type=files&q=${encodeURIComponent(query)}`;
-          break;
         default:
-          // Default to Google for unknown engines
-          searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+          break;
       }
-      tabTitle = `${engine} search: ${query}`;
-    } else {
-      // No query - open homepage
-      switch (engine) {
-        case 'google':
-          searchUrl = `https://www.google.com`;
-          break;
-        case 'bing':
-          searchUrl = `https://www.bing.com`;
-          break;
 
-        case 'youtube':
-          searchUrl = `https://www.youtube.com`;
-          break;
-        case 'github':
-          searchUrl = `https://github.com`;
-          break;
-        case 'stackoverflow':
-          searchUrl = `https://stackoverflow.com`;
-          break;
-        case 'reddit':
-          searchUrl = `https://www.reddit.com`;
-          break;
-        case 'wikipedia':
-          searchUrl = `https://en.wikipedia.org`;
-          break;
-        case 'arxiv':
-          searchUrl = `https://arxiv.org`;
-          break;
-        case 'twitter':
-          searchUrl = `https://twitter.com`;
-          break;
-        case 'linkedin':
-          searchUrl = `https://www.linkedin.com`;
-          break;
-        case 'amazon':
-          searchUrl = `https://www.amazon.com`;
-          break;
-        case 'ebay':
-          searchUrl = `https://www.ebay.com`;
-          break;
-        case 'spotify':
-          searchUrl = `https://open.spotify.com`;
-          break;
-        case 'netflix':
-          searchUrl = `https://www.netflix.com`;
-          break;
-        case 'medium':
-          searchUrl = `https://medium.com`;
-          break;
-        case 'quora':
-          searchUrl = `https://www.quora.com`;
-          break;
-        case 'discord':
-          searchUrl = `https://discord.com`;
-          break;
-        case 'slack':
-          searchUrl = `https://slack.com`;
-          break;
-        case 'notion':
-          searchUrl = `https://www.notion.so`;
-          break;
-        case 'figma':
-          searchUrl = `https://www.figma.com`;
-          break;
-        default:
-          // Default to Google for unknown engines
-          searchUrl = `https://www.google.com`;
-      }
-      tabTitle = `${engine} homepage`;
-    }
-    
-          // Check if it's an LLM provider for easter egg (check both query and URL)
-      console.log('🔍 Checking search query for easter egg:', query);
-      if (this.isLLMProvider(query) || this.isLLMProvider(searchUrl)) {
-        console.log('🎉 Easter egg triggered! Redirecting to lobotomy memes...');
-        const lobotomyUrl = this.getLobotomyUrl();
-        console.log('📁 Lobotomy URL:', lobotomyUrl);
-        // Always add to General task for search engine results
-        this.switchToGeneralTask();
-        this.createTabInGeneralTask(lobotomyUrl, '🧠 SELF-LOBOTOMY 🧠', 'You\'ve been lobotomized!');
+      // "@engine words" searches that site; "@engine" alone opens it.
+      const engine = ENGINE_URLS[name] ? name : 'google';
+      const [homeUrl, searchUrl] = ENGINE_URLS[engine];
+      const url = argument ? searchUrl(encodeURIComponent(argument)) : homeUrl;
+      const title = argument ? `${engine} search: ${argument}` : engine;
+
+      this.switchToGeneralTask();
+      if (this.isLLMProvider(argument) || this.isLLMProvider(url)) {
+        this.createTabInGeneralTask(this.getLobotomyUrl(), LOBOTOMY_TITLE, '', 'You asked for an AI chat site');
         return;
       }
-      
-      // Always add search engine results to General task
-      this.switchToGeneralTask();
-      this.createTabInGeneralTask(searchUrl, tabTitle, '');
+      this.createTabInGeneralTask(url, title, '',
+        argument ? `Opened a ${engine} search` : `Opened ${engine}`);
       return;
     }
-    
-    // Check if it's a URL
-    let url = input;
-    if (!input.startsWith('http://') && !input.startsWith('https://')) {
-      // Assume it's a domain and add https://
-      url = `https://${input}`;
-    }
-    
-    // Validate URL
+
+    const url = /^https?:\/\//i.test(input) ? input : `https://${input}`;
     try {
       new URL(url);
-      
-      // Check if it's an LLM provider for easter egg
-      console.log('🔍 Checking URL for easter egg:', url);
-      if (this.isLLMProvider(url)) {
-        console.log('🎉 Easter egg triggered! Redirecting to lobotomy memes...');
-        const lobotomyUrl = this.getLobotomyUrl();
-        console.log('📁 Lobotomy URL:', lobotomyUrl);
-        // Always add to General task for direct URLs
-        this.switchToGeneralTask();
-        this.createTabInGeneralTask(lobotomyUrl, '🧠 SELF-LOBOTOMY 🧠', 'You\'ve been lobotomized!');
-        return;
-      }
-      
-      // Always add direct URLs to General task
-      this.switchToGeneralTask();
-      this.createTabInGeneralTask(url, input, '');
     } catch (e) {
       console.error('Invalid URL:', input);
-      // Could show an error message here
+      return;
     }
+
+    this.switchToGeneralTask();
+    if (this.isLLMProvider(url)) {
+      this.createTabInGeneralTask(this.getLobotomyUrl(), LOBOTOMY_TITLE, '', 'You asked for an AI chat site');
+      return;
+    }
+    this.createTabInGeneralTask(url, input, '', 'Opened the address you typed');
   }
 
+  // Block zoom shortcuts and gestures on the shell (pages keep their own).
   preventZoomFunctionality() {
-    // Only prevent zoom shortcuts, allow other keyboard commands
     document.addEventListener('keydown', (e) => {
-      // Prevent Ctrl/Cmd + Plus (zoom in)
-      if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '=')) {
+      if ((e.ctrlKey || e.metaKey) && ['+', '=', '-', '0'].includes(e.key)) {
         e.preventDefault();
-        return false;
-      }
-      
-      // Prevent Ctrl/Cmd + Minus (zoom out)
-      if ((e.ctrlKey || e.metaKey) && e.key === '-') {
-        e.preventDefault();
-        return false;
-      }
-      
-      // Prevent Ctrl/Cmd + 0 (reset zoom)
-      if ((e.ctrlKey || e.metaKey) && e.key === '0') {
-        e.preventDefault();
-        return false;
       }
     });
 
-    // Prevent pinch-to-zoom gestures on the browser UI
-    document.addEventListener('gesturestart', (e) => {
-      e.preventDefault();
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach((type) => {
+      document.addEventListener(type, (e) => e.preventDefault());
     });
 
-    document.addEventListener('gesturechange', (e) => {
-      e.preventDefault();
-    });
-
-    document.addEventListener('gestureend', (e) => {
-      e.preventDefault();
-    });
-
-    // Prevent double-tap zoom on the browser UI
     let lastTouchEnd = 0;
     document.addEventListener('touchend', (e) => {
-      const now = (new Date()).getTime();
-      if (now - lastTouchEnd <= 300) {
-        e.preventDefault();
-      }
+      const now = Date.now();
+      if (now - lastTouchEnd <= 300) e.preventDefault();
       lastTouchEnd = now;
     }, false);
   }
 
   activateWebview() {
     this.hasActiveWebview = true;
-    const contentArea = document.querySelector('.content-area');
+    document.querySelector('.content-area')?.classList.add('has-active-webview');
+
     const queryInputContainer = document.querySelector('.query-input-container');
-    const webviewContainer = document.getElementById('webview-container');
-    const webviewComponent = webviewContainer?.querySelector('.webview-container');
-    const focusOverlay = document.querySelector('.focus-overlay');
-    
-    if (contentArea) {
-      contentArea.classList.add('has-active-webview');
-    }
-    
     if (queryInputContainer) {
       queryInputContainer.classList.add('is-collapsed');
-      queryInputContainer.classList.remove('is-editor-mode'); // Clear editor mode
+      queryInputContainer.classList.remove('is-editor-mode');
     }
-    
-    // Clear focus overlay when webview is activated
-    if (focusOverlay) {
-      focusOverlay.classList.remove('is-active');
-    }
-    
-    if (webviewContainer) {
-      webviewContainer.style.display = 'block';
-    }
-    
-    // Set initial webview positioning
+    document.querySelector('.focus-overlay')?.classList.remove('is-active');
+
+    const webviewContainer = document.getElementById('webview-container');
+    if (webviewContainer) webviewContainer.style.display = 'block';
+
     this.updateWebviewPosition();
-    
-    console.log('Webview activated, query input collapsed');
+    this.updatePageStatus();
   }
 
+  // The page layer is fixed to the viewport and sized around whichever panels
+  // are open, moving on the same curve as the panels.
   updateWebviewPosition() {
-    const webviewComponent = document.querySelector('#webview-container .webview-container');
-    const header = document.querySelector('.app-header');
-    const sidebar = document.querySelector('.sidebar');
-    const rightSidebar = document.querySelector('.right-sidebar');
-    
-    if (!webviewComponent) return;
-    
-    // Check if header and sidebars are visible
-    const isHeaderVisible = header?.classList.contains('is-visible');
-    const isSidebarVisible = sidebar?.classList.contains('is-visible');
-    const isRightSidebarVisible = rightSidebar?.classList.contains('is-visible');
-    
-    // Calculate position and size
-    const top = isHeaderVisible ? '48px' : '0px';
-    const left = isSidebarVisible ? '200px' : '0px';
-    const right = isRightSidebarVisible ? '200px' : '0px';
-    const width = isSidebarVisible || isRightSidebarVisible ? 
-      `calc(100vw - ${isSidebarVisible ? '200px' : '0px'} - ${isRightSidebarVisible ? '200px' : '0px'})` : 
-      '100vw';
-    const height = isHeaderVisible ? 'calc(100vh - 48px)' : '100vh';
-    
-    // Apply styles
-    webviewComponent.style.position = 'fixed';
-    webviewComponent.style.top = top;
-    webviewComponent.style.left = left;
-    webviewComponent.style.right = right;
-    webviewComponent.style.bottom = '0';
-    webviewComponent.style.width = width;
-    webviewComponent.style.height = height;
-    webviewComponent.style.zIndex = '1'; // Lower z-index so hover zones can detect mouse
-    webviewComponent.style.transition = 'top var(--transition-duration-normal) var(--transition-easing-smooth), left var(--transition-duration-normal) var(--transition-easing-smooth), right var(--transition-duration-normal) var(--transition-easing-smooth), width var(--transition-duration-normal) var(--transition-easing-smooth), height var(--transition-duration-normal) var(--transition-easing-smooth), opacity var(--transition-duration-normal) var(--transition-easing-smooth)';
-    
-    // Also set styles on the webview element itself
-    const webviewElement = webviewComponent.querySelector('.browser-webview');
-    if (webviewElement) {
-      webviewElement.style.position = 'absolute';
-      webviewElement.style.top = '0';
-      webviewElement.style.left = '0';
-      webviewElement.style.right = '0';
-      webviewElement.style.bottom = '0';
-      webviewElement.style.width = '100%';
-      webviewElement.style.height = '100%';
-      webviewElement.style.zIndex = '1';
-    }
+    const page = document.querySelector('#webview-container .webview-container');
+    if (!page) return;
+
+    const headerOn = document.querySelector('.app-header')?.classList.contains('is-visible');
+    const leftOn = document.querySelector('.sidebar')?.classList.contains('is-visible');
+    const rightOn = document.querySelector('.right-sidebar')?.classList.contains('is-visible');
+    // The header's hairline sits inside its 48px; each sidebar adds a 1px border.
+    const top = headerOn ? HEADER_HEIGHT_PX : 0;
+    const left = leftOn ? SIDEBAR_WIDTH_PX + 1 : 0;
+    const right = rightOn ? SIDEBAR_WIDTH_PX + 1 : 0;
+
+    const move = 'var(--duration-panel) var(--ease-panel)';
+    Object.assign(page.style, {
+      position: 'fixed',
+      top: `${top}px`,
+      left: `${left}px`,
+      right: `${right}px`,
+      bottom: '0',
+      width: 'auto',
+      height: 'auto',
+      zIndex: '1',
+      transition: `top ${move}, left ${move}, right ${move}`
+    });
   }
 
   deactivateWebview() {
     this.hasActiveWebview = false;
-    const contentArea = document.querySelector('.content-area');
-    const queryInputContainer = document.querySelector('.query-input-container');
+    document.querySelector('.content-area')?.classList.remove('has-active-webview');
+    document.querySelector('.query-input-container')?.classList.remove('is-collapsed');
+
     const webviewContainer = document.getElementById('webview-container');
-    const webviewComponent = webviewContainer?.querySelector('.webview-container');
-    
-    if (contentArea) {
-      contentArea.classList.remove('has-active-webview');
+    if (webviewContainer) webviewContainer.style.display = 'none';
+
+    const page = webviewContainer?.querySelector('.webview-container');
+    if (page) {
+      ['position', 'top', 'left', 'right', 'bottom', 'width', 'height', 'zIndex', 'transition']
+        .forEach((prop) => { page.style[prop] = ''; });
     }
-    
-    if (queryInputContainer) {
-      queryInputContainer.classList.remove('is-collapsed');
-    }
-    
-    if (webviewContainer) {
-      webviewContainer.style.display = 'none';
-    }
-    
-    // Reset the webview component styles
-    if (webviewComponent) {
-      webviewComponent.style.position = '';
-      webviewComponent.style.top = '';
-      webviewComponent.style.left = '';
-      webviewComponent.style.right = '';
-      webviewComponent.style.bottom = '';
-      webviewComponent.style.width = '';
-      webviewComponent.style.height = '';
-      webviewComponent.style.zIndex = '';
-      webviewComponent.style.backgroundColor = '';
-    }
-    
-    // Reset the webview element styles
-    const webviewElement = webviewComponent?.querySelector('.browser-webview');
-    if (webviewElement) {
-      webviewElement.style.position = '';
-      webviewElement.style.top = '';
-      webviewElement.style.left = '';
-      webviewElement.style.right = '';
-      webviewElement.style.bottom = '';
-      webviewElement.style.width = '';
-      webviewElement.style.height = '';
-      webviewElement.style.zIndex = '';
-    }
-    
-    console.log('Webview deactivated, query input expanded');
   }
 
   setupCollapsedQueryInput() {
     const queryInputContainer = document.querySelector('.query-input-container');
-    
-    if (queryInputContainer) {
-      // Handle click on collapsed query input to expand it
-      queryInputContainer.addEventListener('click', (e) => {
-        if (queryInputContainer.classList.contains('is-collapsed')) {
-          e.preventDefault();
-          e.stopPropagation();
-          
-          // Deactivate webview and expand query input
-          this.deactivateWebview();
-          
-          // Focus the text area
-          const textArea = queryInputContainer.querySelector('.query-input__text-area');
-          if (textArea) {
-            setTimeout(() => {
-              textArea.focus();
-            }, 100);
-          }
-        }
-      });
-    }
+    if (!queryInputContainer) return;
+
+    // The collapsed "Search" button is a real control: focusable, Enter/Space open it.
+    const expand = (e) => {
+      if (!queryInputContainer.classList.contains('is-collapsed')) return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.openQueryInput();
+    };
+    queryInputContainer.addEventListener('click', expand);
+    queryInputContainer.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') expand(e);
+    });
+
+    const syncRole = () => {
+      const collapsed = queryInputContainer.classList.contains('is-collapsed');
+      if (collapsed) {
+        queryInputContainer.setAttribute('role', 'button');
+        queryInputContainer.setAttribute('tabindex', '0');
+        queryInputContainer.setAttribute('aria-label', 'New search');
+      } else {
+        queryInputContainer.removeAttribute('role');
+        queryInputContainer.removeAttribute('tabindex');
+        queryInputContainer.removeAttribute('aria-label');
+      }
+    };
+    new MutationObserver(syncRole).observe(queryInputContainer, { attributes: true, attributeFilter: ['class'] });
+    syncRole();
   }
 }
 
-// Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('DOMContentLoaded event fired');
-  // Initialize component manager first
   componentManager.initialize().then(() => {
-    console.log('Component manager initialized, creating App');
-    // Then initialize the app
     new App();
   });
-}); 
+});

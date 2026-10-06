@@ -1,323 +1,146 @@
 /* -------------------------------------------------------------------------- */
-/*                       06-components/_query-input.css                     */
+/*                       06-components/_query-input.css                       */
 /* -------------------------------------------------------------------------- */
 
+/* The query box: a panel with a hairline, centred on the start page. */
 .query-input-container {
-  /* Neumorphic Style & Shape */
-  background-color: var(--color-base);
-  box-shadow: var(--shadow-neumorphic);
-  border-radius: 9999px; /* Perfect pill shape */
-  
-  /* Sizing, Layout */
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-width: 250px;
-  max-width: 600px;
-  padding: var(--space-4) var(--space-5); /* More vertical padding */
-  position: relative; /* Needed for z-index */
-  
-  /* Smooth Growth Animation & Transitions */
-  transition: 
-    box-shadow var(--transition-duration-normal) var(--transition-easing-smooth),
-    transform var(--transition-duration-normal) var(--transition-easing-smooth),
-    width var(--transition-duration-normal) var(--transition-easing-smooth),
-    height var(--transition-duration-normal) var(--transition-easing-smooth),
-    border-radius var(--transition-duration-normal) var(--transition-easing-smooth);
-  
-  /* Hardware acceleration */
-  transform: translateZ(0);
-  will-change: box-shadow, transform, width, height, border-radius;
+  gap: var(--space-3);
+  width: min(var(--width-measure), 100%);
+  padding: var(--space-4) var(--space-5);
+  background-color: var(--color-surface);
+  border: var(--border-hairline);
+  transition: border-color var(--duration-hover) var(--ease-hover);
 }
 
-/* Collapsed state - small sphere in corner */
+.query-input-container:focus-within {
+  border-color: var(--color-ink);
+}
+
+/* Brief pressed state while a query is submitted. */
+.query-input-container.is-active {
+  background-color: var(--color-ground);
+}
+
+/* Collapsed: once a page is open, an outline "Search" button bottom-right
+   brings the query box back (same look as .button). */
 .query-input-container.is-collapsed {
   position: fixed;
-  bottom: 20px;
-  right: 20px;
-  width: 60px;
-  height: 60px;
-  min-width: 60px;
-  max-width: 60px;
-  border-radius: 50%;
-  padding: 0;
+  right: var(--space-4);
+  bottom: var(--space-4);
   z-index: 2000;
+  width: auto;
+  min-height: var(--icon-button-size);
+  padding: 0 var(--space-4);
+  background-color: var(--color-ground);
+  border: var(--border-ink);
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: var(--color-accent);
-  box-shadow: var(--shadow-neumorphic);
-  
-  /* Smooth collapse transitions */
-  transition: 
-    transform var(--transition-duration-normal) var(--transition-easing-bounce),
-    box-shadow var(--transition-duration-normal) var(--transition-easing-smooth),
-    width var(--transition-duration-normal) var(--transition-easing-smooth),
-    height var(--transition-duration-normal) var(--transition-easing-smooth),
-    border-radius var(--transition-duration-normal) var(--transition-easing-smooth);
-  
-  /* Hardware acceleration */
-  transform: translateZ(0);
-  will-change: transform, box-shadow, width, height, border-radius;
-}
-
-.query-input-container.is-collapsed:hover {
-  transform: scale(1.1) translateZ(0);
-  box-shadow: var(--shadow-neumorphic-inset);
-}
-
-.query-input-container.is-collapsed:active {
-  transform: scale(0.95) translateZ(0);
-  transition-duration: 0.1s; /* Faster response on active */
-}
-
-.query-input-container.is-collapsed .query-input__text-area {
-  display: none;
-}
-
-.query-input-container.is-collapsed .query-input__controls {
-  display: none;
+  transition:
+    background-color var(--duration-hover) var(--ease-hover),
+    color var(--duration-hover) var(--ease-hover);
 }
 
 .query-input-container.is-collapsed::before {
-  content: "🔍";
-  font-size: 24px;
-  color: var(--color-text-primary);
-  
-  /* Smooth icon transitions */
-  transition: 
-    transform var(--transition-duration-fast) var(--transition-easing-bounce);
-  
-  /* Hardware acceleration */
-  transform: translateZ(0);
-  will-change: transform;
+  content: "Search";
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
 }
 
-.query-input-container.is-collapsed:hover::before {
-  transform: scale(1.1) translateZ(0);
+.query-input-container.is-collapsed:hover {
+  background-color: var(--color-ink);
+  color: var(--color-ground);
 }
 
-/* Editor mode - expanded rectangle */
-.query-input-container.is-editor-mode {
-  border-radius: 12px;
-  min-width: 400px;
-  max-width: 800px;
-  padding: var(--space-5) var(--space-6);
-  z-index: 2001;
-  
-  /* Smooth editor mode transitions */
-  transition: 
-    border-radius var(--transition-duration-normal) var(--transition-easing-smooth),
-    min-width var(--transition-duration-normal) var(--transition-easing-smooth),
-    max-width var(--transition-duration-normal) var(--transition-easing-smooth),
-    padding var(--transition-duration-normal) var(--transition-easing-smooth);
-  
-  /* Hardware acceleration */
-  transform: translateZ(0);
-  will-change: border-radius, min-width, max-width, padding;
-}
-
-.query-input-container.is-editor-mode {
-  min-height: 200px;
-  height: 240px;
-  align-items: flex-start;
-  border-radius: 12px !important;
-  transition: 
-    min-width var(--transition-duration-normal) var(--transition-easing-smooth),
-    max-width var(--transition-duration-normal) var(--transition-easing-smooth),
-    padding var(--transition-duration-normal) var(--transition-easing-smooth),
-    min-height var(--transition-duration-normal) var(--transition-easing-smooth),
-    height var(--transition-duration-normal) var(--transition-easing-smooth);
-}
-
-.query-input-container.is-editor-mode .query-input__text-area {
-  min-height: 160px;
-  height: 100%;
-  font-size: 1.2rem;
-  line-height: 1.6;
-  padding: 20px;
-}
-
-/* Hide send button and search icon in focus mode */
-.query-input-container.is-editor-mode .query-input__send-button,
-.query-input-container.is-editor-mode::before,
-.query-input-container.is-editor-mode .query-input__controls {
+.query-input-container.is-collapsed .query-input__text-area,
+.query-input-container.is-collapsed .query-input__controls,
+.query-input-container.is-collapsed .query-input__autocomplete {
   display: none !important;
 }
 
-/* Active state for visual feedback */
-.query-input-container.is-active {
-  box-shadow: var(--shadow-neumorphic-inset);
-  transform: scale(1.02) translateZ(0);
-  
-  /* Smooth active state transitions */
-  transition: 
-    box-shadow var(--transition-duration-fast) var(--transition-easing-smooth),
-    transform var(--transition-duration-fast) var(--transition-easing-bounce);
-  
-  /* Hardware acceleration */
-  will-change: box-shadow, transform;
+/* Editor mode: long queries get a taller box with a Search button. */
+.query-input-container.is-editor-mode {
+  z-index: 2001;
+  width: min(var(--width-wide), 100%);
+  height: var(--height-editor);
+  flex-direction: column;
+  align-items: stretch;
+  padding: var(--space-5);
 }
 
-/* Text area */
-.query-input__text-area {
+.query-input-container.is-editor-mode .query-input__text-area {
   flex: 1;
-  border: none;
-  background: transparent;
-  outline: none;
-  resize: none;
-  font-family: var(--font-family-primary);
-  font-size: var(--font-size-base);
-  color: var(--color-text-primary);
-  line-height: 1.4;
-  min-height: 24px;
-  max-height: 120px;
-  
-  /* Smooth height transitions */
-  transition: height var(--transition-duration-normal) var(--transition-easing-smooth);
-  
-  /* Hardware acceleration */
-  transform: translateZ(0);
-  will-change: height;
+  min-height: 0;
+  max-height: none;
+  font-size: var(--font-size-title);
 }
 
-.query-input__text-area::placeholder {
-  text-transform: lowercase;
-  color: #888ba0;
-  opacity: 0.7;
-  text-align: left;
-  vertical-align: middle;
-  font-style: italic;
-  font-size: 1rem;
-  line-height: 1.6;
-  letter-spacing: 0.01em;
+.query-input-container.is-editor-mode .query-input__text-area:empty::before {
+  top: 0;
+  transform: none;
 }
 
-.query-input__text-area:focus::placeholder {
-  opacity: 0.4;
-}
-
-.query-input__text-area:empty:before {
-  content: attr(data-placeholder);
-  display: block;
-  color: #888ba0;
-  opacity: 0.7;
-  text-transform: lowercase;
-  text-align: left;
-  font-style: italic;
-  font-size: 1rem;
-  line-height: 1.6;
-  letter-spacing: 0.01em;
-  pointer-events: none;
-  position: absolute;
-  left: 1px;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
+/* Text area (contenteditable). Grows to five lines, then scrolls. */
 .query-input__text-area {
   position: relative;
+  flex: 1;
+  min-height: calc(var(--line-height-base) * 1em);
+  max-height: calc(var(--line-height-base) * 5em);
+  overflow-y: auto;
+  color: var(--color-ink);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
 }
 
-/* Controls */
+.query-input__text-area:focus-visible {
+  outline: none; /* the box border shows focus */
+}
+
+.query-input__text-area:empty::before {
+  content: attr(data-placeholder);
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  color: var(--color-ink-faint);
+  pointer-events: none;
+}
+
+/* Controls: only in editor mode, where Enter adds a new line. */
 .query-input__controls {
-  display: flex;
+  display: none;
   align-items: center;
-  gap: 8px;
-  opacity: 1;
-  
-  /* Smooth controls transitions */
-  transition: 
-    opacity var(--transition-duration-normal) var(--transition-easing-smooth),
-    transform var(--transition-duration-normal) var(--transition-easing-smooth);
-  
-  /* Hardware acceleration */
-  transform: translateZ(0);
-  will-change: opacity, transform;
+  justify-content: flex-end;
+  gap: var(--space-3);
 }
 
 .query-input-container.is-editor-mode .query-input__controls {
-  opacity: 1;
-  transform: scale(1) translateZ(0);
-}
-
-.query-input-container:not(.is-editor-mode) .query-input__controls {
-  opacity: 0;
-  transform: scale(0.8) translateZ(0);
-  pointer-events: none;
-}
-
-/* Send button */
-.query-input__send-button {
-  width: 32px;
-  height: 32px;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  background: transparent;
-  border-radius: 50%;
-  cursor: pointer;
-  color: var(--color-text-secondary);
-  
-  /* Smooth button transitions */
-  transition: 
-    transform var(--transition-duration-fast) var(--transition-easing-bounce),
-    background-color var(--transition-duration-fast) var(--transition-easing),
-    color var(--transition-duration-fast) var(--transition-easing);
-  
-  /* Hardware acceleration */
-  transform: translateZ(0);
-  will-change: transform, background-color, color;
 }
 
-.query-input__send-button:hover {
-  background-color: rgba(142, 130, 255, 0.1);
-  color: var(--color-accent);
-  transform: scale(1.1) translateZ(0);
+/* Intro under the query box. Hidden once any tab exists (body.has-tabs). */
+.query-intro {
+  width: min(var(--width-measure), 100%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
-.query-input__send-button:active {
-  transform: scale(0.95) translateZ(0);
-  transition-duration: 0.1s; /* Faster response on active */
+.query-intro p {
+  margin: 0;
 }
 
-.query-input__send-button svg {
-  width: 16px;
-  height: 16px;
-  
-  /* Smooth icon transitions */
-  transition: 
-    transform var(--transition-duration-fast) var(--transition-easing);
-  
-  /* Hardware acceleration */
-  transform: translateZ(0);
-  will-change: transform;
-}
-
-.query-input__send-button:hover svg {
-  transform: translateX(1px) translateZ(0);
-}
-
-/* Character count */
-.query-input__char-count {
+.query-intro__what {
   font-size: var(--font-size-sm);
-  color: var(--color-text-tertiary);
-  min-width: 30px;
-  text-align: right;
-  
-  /* Smooth count transitions */
-  transition: 
-    color var(--transition-duration-fast) var(--transition-easing);
-  
-  will-change: color;
+  color: var(--color-ink-muted);
 }
 
-.query-input__char-count.near-limit {
-  color: #f59e0b;
+body.has-tabs .query-intro {
+  display: none;
 }
 
-.query-input__char-count.at-limit {
-  color: #ef4444;
+.query-input__autocomplete {
+  left: -1px;
+  right: -1px;
 }

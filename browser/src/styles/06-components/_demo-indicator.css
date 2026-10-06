@@ -1,0 +1,20 @@
+/* Bottom-left note shown while no backend is running (js/api.js). Leaves
+   room on the right for the collapsed Search button. */
+.demo-indicator {
+  position: fixed;
+  left: var(--space-4);
+  bottom: var(--space-4);
+  z-index: 1900;
+  max-width: calc(100vw - var(--space-7) * 3);
+  padding: var(--space-1) var(--space-2);
+  border: var(--border-hairline);
+  background-color: var(--color-ground);
+  font-size: var(--font-size-sm);
+  color: var(--color-ink-muted);
+  pointer-events: none;
+}
+
+.demo-indicator .label {
+  margin-right: var(--space-1);
+  color: var(--color-ink);
+}

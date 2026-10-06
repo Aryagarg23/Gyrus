@@ -1,49 +1,33 @@
 /* Base element styles */
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
+  border-radius: 0;
 }
 
-/* Hide all scrollbars globally */
+/* The shell hides scrollbars; pages inside the webview keep their own. */
 * {
-  scrollbar-width: none !important; /* Firefox */
-  -ms-overflow-style: none !important; /* Internet Explorer 10+ */
+  scrollbar-width: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 *::-webkit-scrollbar {
-  display: none !important; /* Chrome, Safari, Opera */
-  width: 0 !important;
-  height: 0 !important;
-  background: transparent !important;
-}
-
-*::-webkit-scrollbar-track {
-  display: none !important;
-}
-
-*::-webkit-scrollbar-thumb {
-  display: none !important;
-}
-
-*::-webkit-scrollbar-corner {
-  display: none !important;
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 html {
   height: 100vh;
-  font-size: 16px;
-  -webkit-text-size-adjust: 100%;
-  -ms-text-size-adjust: 100%;
+  font-size: 100%;
   text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Prevent zoom and scaling */
   touch-action: manipulation;
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  -khtml-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
   user-select: none;
+  -webkit-user-select: none;
 }
 
 body {
@@ -51,65 +35,56 @@ body {
   margin: 0;
   display: flex;
   flex-direction: column;
-  box-sizing: border-box; /* Ensure padding is included in the width */
-  background-color: var(--color-base);
+  min-height: 0;
+  overflow: hidden;
+  background-color: var(--color-ground);
+  color: var(--color-ink);
   font-family: var(--font-family-primary);
   font-size: var(--font-size-base);
+  font-weight: var(--font-weight-regular);
   line-height: var(--line-height-base);
-  color: var(--color-text-primary);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  /* Prevent zoom and scaling */
-  touch-action: manipulation;
-  -webkit-user-select: none;
-  -khtml-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-  /* Disable zoom gestures */
-  -webkit-tap-highlight-color: transparent;
-  min-height: 0; /* Allow flex item to shrink below content size */
-  overflow: hidden; /* Prevent scrollbars */
 }
 
-/* Allow text selection in input areas */
-input, textarea, [contenteditable] {
-  -webkit-user-select: text;
-  -khtml-user-select: text;
-  -moz-user-select: text;
-  -ms-user-select: text;
+/* No zoom on the shell itself (app.js also blocks the zoom shortcuts). */
+html,
+body {
+  zoom: 1;
+  transform: none;
+}
+
+input,
+textarea,
+[contenteditable] {
   user-select: text;
+  -webkit-user-select: text;
 }
 
-/* Prevent zoom on double-tap */
-* {
-  -webkit-tap-highlight-color: transparent;
+button,
+input {
+  font: inherit;
+  color: inherit;
 }
 
-/* Additional zoom prevention */
-html, body {
-  /* Prevent any scaling */
-  transform: none !important;
-  -webkit-transform: none !important;
-  -moz-transform: none !important;
-  -ms-transform: none !important;
-  
-  /* Prevent zoom */
-  zoom: 1 !important;
-  -webkit-zoom: 1 !important;
-  -moz-zoom: 1 !important;
-  
-  /* Disable text size adjustment */
-  -webkit-text-size-adjust: 100% !important;
-  -moz-text-size-adjust: 100% !important;
-  -ms-text-size-adjust: 100% !important;
-  text-size-adjust: 100% !important;
+/* Keyboard focus: 2px blue ring, 2px off the control. Blue's technical use. */
+:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
 }
 
-/* Prevent any element from being scaled */
-* {
-  transform: none !important;
-  -webkit-transform: none !important;
-  -moz-transform: none !important;
-  -ms-transform: none !important;
-} 
+/* Shared label style: uppercase, small, tracked, ink at 60%. */
+.label {
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--letter-spacing-label);
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+    animation: none !important;
+  }
+}

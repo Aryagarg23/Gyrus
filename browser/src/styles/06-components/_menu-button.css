@@ -1,86 +1,25 @@
-.menu-button {
-  --button-size: var(--header-element-content-height);
-  width: var(--button-size);
-  height: var(--button-size);
-  min-width: var(--button-size); /* Ensure minimum width */
-  flex: 0 0 auto; /* Don't grow, don't shrink, use natural size */
-  display: flex;
+/* Dropdown opened by the header menu button (an .icon-button). Appended to
+   <body> by app.js because the header clips its overflow. */
+.menu-dropdown {
+  position: fixed;
+  z-index: 3000;
+  min-width: var(--width-menu);
+  display: none;
   flex-direction: column;
-  justify-content: center; /* Center the group of lines */
-  align-items: center;
-  gap: 3px; /* Set a precise gap between lines */
-  box-sizing: border-box; /* Ensure padding is included in the size */
-  padding: 6px;
-  border-radius: 50%; /* Circular button */
-  cursor: pointer;
-  -webkit-app-region: no-drag;
-  
-  /* Glassy Neumorphic Style */
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: linear-gradient(
-    -75deg,
-    rgba(255, 255, 255, 0.05),
-    rgba(255, 255, 255, 0.2),
-    rgba(255, 255, 255, 0.05)
-  );
-  box-shadow: inset 0 0.5px 1px rgba(0, 0, 0, 0.1),
-    inset 0 -1px 1px rgba(255, 255, 255, 0.7);
-  
-  /* Smooth transitions with better easing */
-  transition: 
-    transform var(--transition-duration-fast) var(--transition-easing-bounce),
-    box-shadow var(--transition-duration-fast) var(--transition-easing),
-    color var(--transition-duration-fast) var(--transition-easing);
-  
-  /* Hardware acceleration */
-  transform: translateZ(0);
-  will-change: transform, box-shadow, color;
-  
-  /* Icon styling */
-  color: var(--color-text-secondary);
 }
 
-.menu-button:hover {
-  color: var(--color-accent);
-  transform: translateY(-2px) scale(1.05) translateZ(0);
-  box-shadow: 
-    inset 0 0.5px 1px rgba(0, 0, 0, 0.1),
-    inset 0 -1px 1px rgba(255, 255, 255, 0.7),
-    0 4px 12px rgba(142, 130, 255, 0.2);
+.menu-dropdown.is-open {
+  display: flex;
 }
 
-.menu-button:active {
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.15),
-    inset 0 -1px 1px rgba(255, 255, 255, 0.7),
-    0 0 0 2px var(--color-accent);
-  transform: translateY(0) scale(0.98) translateZ(0);
-  transition-duration: 0.1s; /* Faster response on active */
+.menu-dropdown .button--text {
+  border-bottom: var(--border-hairline);
 }
 
-.menu-button.is-active {
-  color: var(--color-accent);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.15),
-    inset 0 -1px 1px rgba(255, 255, 255, 0.7),
-    0 0 0 2px var(--color-accent);
-  transform: scale(1.02) translateZ(0);
+.menu-dropdown .button--text:last-child {
+  border-bottom: none;
 }
 
-.menu-button__line {
-  width: 12px;
-  height: 1.5px; /* Slightly thicker for better visibility */
-  background-color: var(--color-text-secondary);
-  border-radius: 2px;
-  
-  /* Smooth line transitions */
-  transition: 
-    background-color var(--transition-duration-fast) var(--transition-easing),
-    transform var(--transition-duration-fast) var(--transition-easing);
+.menu-dropdown .button--text:focus-visible {
+  outline-offset: -2px;
 }
-
-.menu-button:hover .menu-button__line {
-  background-color: var(--color-accent);
-}
-
-.menu-button:active .menu-button__line {
-  transform: scale(0.95);
-} 

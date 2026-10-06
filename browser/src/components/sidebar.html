@@ -1,21 +1,12 @@
 <div class="sidebar">
-  <!-- Fake background element for consistent hover detection -->
   <div class="sidebar-background"></div>
-  
   <div class="sidebar__content">
-    <!-- Tab header with add button -->
     <div class="sidebar__header">
-      <h3 class="sidebar__title">Task / Query</h3>
-      <button class="sidebar__add-tab" type="button" title="New Task">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-          <path d="M8 1v6H2v2h6v6h2V9h6V7H10V1H8z"/>
-        </svg>
+      <h3 class="sidebar__title label">Tasks</h3>
+      <button class="icon-button icon-button--sm sidebar__add-tab" type="button" title="New search (Ctrl+T)" aria-label="New search">
+        <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>
       </button>
     </div>
-    
-    <!-- Tab list -->
-    <div class="sidebar__tab-list">
-      <!-- Tabs will be dynamically added here -->
-    </div>
+    <div class="sidebar__tab-list" role="list" aria-label="Tasks"></div>
   </div>
-</div> 
+</div>

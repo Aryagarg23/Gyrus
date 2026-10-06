@@ -1,159 +1,120 @@
-/* Webview Component */
-.browser-webview {
-  width: 100%;
-  height: 100%;
-  border: none;
-  outline: none;
-  background-color: var(--color-base);
-  border-radius: 0; /* Remove border radius to fill completely */
-  box-shadow: none; /* Remove shadow since it fills the entire area */
-  transition: box-shadow var(--transition-duration-normal) var(--transition-easing);
-  position: absolute; /* Position absolutely to fill container */
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1;
-  pointer-events: auto;
-  
-  /* Hide scrollbars in webview */
-  scrollbar-width: none !important; /* Firefox */
-  -ms-overflow-style: none !important; /* Internet Explorer 10+ */
-}
+/* -------------------------------------------------------------------------- */
+/*                        06-components/_webview.css                          */
+/*   The page area: status line, the webview (Electron) or iframe (plain      */
+/*   browser), and the preview card for external pages in a plain browser     */
+/*   (built by js/platform.js).                                               */
+/* -------------------------------------------------------------------------- */
 
-/* Hide webview scrollbars for webkit browsers */
-.browser-webview::-webkit-scrollbar {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-  background: transparent !important;
-}
-
-.browser-webview::-webkit-scrollbar-track {
-  display: none !important;
-}
-
-.browser-webview::-webkit-scrollbar-thumb {
-  display: none !important;
-}
-
-.browser-webview::-webkit-scrollbar-corner {
-  display: none !important;
-}
-
-/* When webview is active, ensure the webview element fills completely */
-.content-area.has-active-webview #webview-container .browser-webview {
-  width: 100% !important;
-  height: 100% !important;
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-}
-
-.browser-webview:hover {
-  /* Remove hover effect since webview fills the entire area */
-}
-
-/* Webview container to handle layout integration */
 .webview-container {
-  width: 100%;
-  height: 100%;
-  position: absolute; /* Position absolutely to fill the content area */
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  background-color: var(--color-ground);
+}
+
+/* One quiet line saying how the open tab got here. */
+.page-status {
+  position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  bottom: 0;
-  /* display is owned by 05-objects/_layout.css: hidden until a page is open.
-     Setting it here (this file loads later) kept the page layer over the
-     query box once the unclosed <link> above it in index.html was fixed. */
-  background-color: var(--color-base);
-  border-radius: 0; /* Remove border radius to fill completely */
+  height: var(--page-status-height);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-4);
+  border-bottom: var(--border-hairline);
+  background-color: var(--color-ground);
+  white-space: nowrap;
+}
+
+.page-status[hidden] {
+  display: none;
+}
+
+.page-status__text {
   overflow: hidden;
-  z-index: 1;
-  min-height: 100%; /* Ensure minimum height */
-  
-  /* Hide scrollbars in webview container */
-  scrollbar-width: none !important; /* Firefox */
-  -ms-overflow-style: none !important; /* Internet Explorer 10+ */
+  text-overflow: ellipsis;
 }
 
-/* Hide webview container scrollbars for webkit browsers */
-.webview-container::-webkit-scrollbar {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-  background: transparent !important;
+.browser-webview,
+.page-preview {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: auto;
+  border: none;
+  background-color: var(--color-ground);
 }
 
-.webview-container::-webkit-scrollbar-track {
-  display: none !important;
+.webview-container.has-status .browser-webview,
+.webview-container.has-status .page-preview {
+  top: var(--page-status-height);
 }
 
-.webview-container::-webkit-scrollbar-thumb {
-  display: none !important;
-}
-
-.webview-container::-webkit-scrollbar-corner {
-  display: none !important;
-}
-
-/* When webview is active, completely override positioning */
-.content-area.has-active-webview #webview-container .webview-container {
-  position: fixed !important;
-  top: 48px !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  width: 100vw !important;
-  height: calc(100vh - 48px) !important;
-  z-index: 999 !important;
-  background-color: red !important; /* Debug: temporary red background to see boundaries */
-}
-
-/* Adjust for sidebar when visible */
-.sidebar.is-visible ~ .content-area.has-active-webview #webview-container .webview-container {
-  left: 200px !important;
-  width: calc(100vw - 200px) !important;
-}
-
-/* Loading indicator */
 .webview-loading {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  top: var(--space-2);
+  right: var(--space-4);
+  z-index: 2;
+  display: none;
+  line-height: calc(var(--page-status-height) - var(--space-4));
+  pointer-events: none;
+}
+
+/* Preview card for an external page (plain browser only). */
+.page-preview {
+  z-index: 1;
+  display: none;
+  overflow-y: auto;
+  padding: var(--space-7) var(--space-4);
+}
+
+.page-preview.is-visible {
+  display: block;
+}
+
+.page-preview__card {
+  max-width: var(--width-measure);
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: var(--space-4);
-  color: var(--color-text-secondary);
-  z-index: 2;
-  pointer-events: none; /* Don't interfere with webview interaction */
+  gap: var(--space-3);
 }
 
-.webview-loading__spinner {
-  width: 32px;
-  height: 32px;
-  border: 3px solid var(--color-light-shadow);
-  border-top: 3px solid var(--color-accent);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
+.page-preview__origin {
+  margin: 0;
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+.page-preview__title {
+  margin: 0;
+  font-size: var(--font-size-display);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  overflow-wrap: anywhere;
 }
 
-.webview-loading__text {
-  font-family: var(--font-family-primary);
-  font-size: var(--font-size-base);
-  color: var(--color-text-secondary);
+.page-preview__url {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-ink-muted);
+  overflow-wrap: anywhere;
+  user-select: text;
 }
 
-/* Hide loading when webview is ready */
-.browser-webview[data-ready="true"] + .webview-loading {
-  display: none;
-} 
+.page-preview__snippet {
+  margin: 0;
+  padding-top: var(--space-3);
+  border-top: var(--border-hairline);
+  user-select: text;
+}
+
+.page-preview__actions {
+  padding-top: var(--space-2);
+}
+
+.page-preview__note {
+  margin: var(--space-2) 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-ink-faint);
+}

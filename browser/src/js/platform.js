@@ -5,7 +5,9 @@
 //   - sets window.GYRUS_IN_ELECTRON
 //   - provides a harmless electronAPI stand-in (window buttons do nothing)
 //   - after components load, swaps <webview id="browser-webview"> for an <iframe>
-//     with the same id/class and the webview methods/events app.js relies on
+//     with the same id/class and the webview methods/events app.js relies on.
+//     Same-origin pages (e.g. lobotomy.html) load in the iframe; external pages
+//     get a local preview card instead (see buildPreview)
 //   - hides the window minimize/maximize/close controls
 (function () {
   const inElectron = !!(window.electronAPI && typeof window.electronAPI.getPlatform === 'function');
@@ -49,6 +51,59 @@
     }, 0);
   }
 
+  // Local stand-in for an external page. Framing third-party sites mostly fails
+  // (X-Frame-Options, CSP, bot walls), and the browser can't tell us when it did,
+  // so outside Electron we never frame them: we show what we know about the link
+  // and a button to open it for real. app.js supplies the details through
+  // GyrusPlatform.describeUrl(url) -> { title, snippet, origin } (all optional).
+  function buildPreview() {
+    const el = document.createElement('div');
+    el.className = 'page-preview';
+    el.setAttribute('role', 'region');
+    el.setAttribute('aria-label', 'Page preview');
+    el.innerHTML =
+      '<div class="page-preview__card">' +
+      '<p class="page-preview__origin label"></p>' +
+      '<h1 class="page-preview__title"></h1>' +
+      '<p class="page-preview__url"></p>' +
+      '<p class="page-preview__snippet"></p>' +
+      '<div class="page-preview__actions">' +
+      '<a class="button page-preview__open" target="_blank" rel="noopener noreferrer">Open in a new tab</a>' +
+      '</div>' +
+      '<p class="page-preview__note">Most sites refuse to load inside another page, so in a normal browser Gyrus shows this card instead. The desktop app opens the site itself.</p>' +
+      '</div>';
+    return el;
+  }
+
+  function hostOf(url) {
+    try { return new URL(url).hostname.replace(/^www\./, ''); } catch (_) { return ''; }
+  }
+
+  function describe(url) {
+    let info = {};
+    try {
+      const fn = window.GyrusPlatform && window.GyrusPlatform.describeUrl;
+      info = (typeof fn === 'function' && fn(url)) || {};
+    } catch (_) { info = {}; }
+    return {
+      title: info.title || hostOf(url) || url,
+      snippet: info.snippet || '',
+      origin: info.origin || 'A page you opened',
+    };
+  }
+
+  function fillPreview(el, url) {
+    const info = describe(url);
+    el.querySelector('.page-preview__origin').textContent = info.origin;
+    el.querySelector('.page-preview__title').textContent = info.title;
+    el.querySelector('.page-preview__url').textContent = url;
+    const snippet = el.querySelector('.page-preview__snippet');
+    snippet.textContent = info.snippet;
+    snippet.hidden = !info.snippet;
+    el.querySelector('.page-preview__open').href = url;
+    return info;
+  }
+
   function upgradeWebviewToIframe() {
     const webview = document.getElementById('browser-webview');
     if (!webview || webview.tagName.toLowerCase() !== 'webview') return;
@@ -57,37 +112,9 @@
     iframe.id = webview.id;
     iframe.className = webview.className;
     iframe.setAttribute('title', 'Page');
-    iframe.style.border = '0';
 
-    // Plain wording, minimal style; restyled later.
-    const notice = document.createElement('div');
-    notice.className = 'frame-notice';
-    notice.setAttribute('role', 'note');
-    notice.style.cssText =
-      'position:absolute;top:8px;right:8px;z-index:5;display:none;max-width:360px;' +
-      'padding:6px 10px;background:#fff;color:#222;border:1px solid #ccc;font:13px/1.4 sans-serif;';
-    const noticeText = document.createElement('span');
-    noticeText.textContent = 'Some sites refuse to load inside this page. ';
-    const noticeLink = document.createElement('a');
-    noticeLink.textContent = 'Open in a new tab';
-    noticeLink.target = '_blank';
-    noticeLink.rel = 'noopener noreferrer';
-    const noticeClose = document.createElement('button');
-    noticeClose.type = 'button';
-    noticeClose.textContent = '×';
-    noticeClose.setAttribute('aria-label', 'Dismiss');
-    noticeClose.style.cssText = 'margin-left:8px;border:0;background:none;cursor:pointer;font:inherit;';
-    noticeClose.addEventListener('click', () => { notice.style.display = 'none'; });
-    notice.append(noticeText, noticeLink, noticeClose);
-
-    const updateNotice = (url) => {
-      if (isExternal(url)) {
-        noticeLink.href = url;
-        notice.style.display = 'block';
-      } else {
-        notice.style.display = 'none';
-      }
-    };
+    const preview = buildPreview();
+    let previewTitle = '';
 
     // Our own history: cross-origin frames don't expose theirs.
     const history = [];
@@ -102,8 +129,19 @@
         history.push(currentUrl);
         index = history.length - 1;
       }
-      updateNotice(currentUrl);
       emit(iframe, 'did-start-loading');
+      if (isExternal(currentUrl)) {
+        previewTitle = fillPreview(preview, currentUrl).title;
+        preview.classList.add('is-visible');
+        iframe.style.visibility = 'hidden';
+        nativeSrc.set.call(iframe, 'about:blank');
+        emit(iframe, 'did-navigate', currentUrl);
+        emit(iframe, 'did-stop-loading');
+        return;
+      }
+      previewTitle = '';
+      preview.classList.remove('is-visible');
+      iframe.style.visibility = '';
       nativeSrc.set.call(iframe, currentUrl);
       emit(iframe, 'did-navigate', currentUrl);
     };
@@ -121,19 +159,16 @@
     iframe.reload = () => navigate(currentUrl, true);
     iframe.getURL = () => currentUrl;
     iframe.getTitle = () => {
+      if (previewTitle) return previewTitle;
       try {
         const t = iframe.contentDocument && iframe.contentDocument.title;
         if (t) return t;
       } catch (_) { /* cross-origin */ }
-      try {
-        const u = new URL(currentUrl);
-        return u.protocol.startsWith('http') ? u.hostname : '';
-      } catch (_) {
-        return '';
-      }
+      return hostOf(currentUrl);
     };
 
     iframe.addEventListener('load', () => {
+      if (previewTitle) return; // the about:blank behind a preview card
       // Same-origin frames can navigate themselves (links inside them); report that.
       try {
         const href = iframe.contentWindow && iframe.contentWindow.location.href;
@@ -152,7 +187,7 @@
 
     const initial = webview.getAttribute('src') || 'about:blank';
     webview.replaceWith(iframe);
-    iframe.parentNode.appendChild(notice);
+    iframe.parentNode.insertBefore(preview, iframe.nextSibling);
     navigate(initial, false);
   }
 
@@ -165,6 +200,8 @@
   window.GyrusPlatform = {
     inElectron,
     isExternal,
+    // Set by app.js: (url) => ({ title, snippet, origin }) for the preview card.
+    describeUrl: null,
     // Called by ComponentManager once components are inserted, before App starts.
     afterComponentsLoaded() {
       if (inElectron) return;

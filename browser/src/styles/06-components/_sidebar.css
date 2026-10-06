@@ -1,339 +1,119 @@
 /* -------------------------------------------------------------------------- */
-/*                         06-components/_sidebar.css                         */
+/*   06-components/_sidebar.css: the two edge panels.                         */
+/*   Left = Tasks, right = Tabs. Both use .panel colours and .row rows        */
+/*   (_controls.css); this file only handles the slide and the headers.       */
 /* -------------------------------------------------------------------------- */
 
-.sidebar {
-  position: relative; /* Change from fixed to relative for normal document flow */
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 0; /* Start fully hidden */
-  background-color: var(--color-base);
+.sidebar,
+.right-sidebar {
+  position: relative;
   z-index: 1000;
-  overflow: hidden; /* Hide content that exceeds the width */
-  
-  /* Smooth transitions with better easing */
-  transition: 
-    width var(--transition-duration-normal) var(--transition-easing-smooth),
-    opacity var(--transition-duration-normal) var(--transition-easing-smooth);
-  
-  /* Hardware acceleration */
-  transform: translateZ(0);
-  will-change: width, opacity;
-  
-  opacity: 0; /* Start invisible */
-  flex-shrink: 0; /* Don't allow sidebar to shrink */
+  flex-shrink: 0;
+  width: 0;
+  overflow: hidden;
+  opacity: 0;
+  background-color: var(--color-surface);
+  border: 0 solid var(--color-hairline);
+  transition:
+    width var(--duration-panel) var(--ease-panel),
+    opacity var(--duration-panel) var(--ease-panel);
 }
 
-/* Fake background element for consistent hover detection */
-.sidebar-background {
+.sidebar.is-visible,
+.right-sidebar.is-visible {
+  width: calc(var(--sidebar-width) + 1px);
+  opacity: 1;
+}
+
+.sidebar.is-visible { border-right-width: 1px; }
+.right-sidebar.is-visible { border-left-width: 1px; }
+
+/* Fixed-width layer that keeps hover detection steady while the width animates. */
+.sidebar-background,
+.right-sidebar-background {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: transparent;
-  z-index: 0;
-  pointer-events: none; /* Disable pointer events to allow clicks to pass through */
-  width: 200px; /* Full sidebar width */
+  inset: 0;
+  width: var(--sidebar-width);
+  pointer-events: none;
 }
 
-.sidebar.is-visible {
-  width: 200px; /* Expand to full width */
-  opacity: 1; /* Make visible */
-}
-
-.sidebar__content {
-  width: 200px; /* Fixed width for the content area */
-  padding: 20px;
-  opacity: 0; /* Hidden by default */
-  
-  /* Smooth content transitions */
-  transition: 
-    opacity var(--transition-duration-normal) var(--transition-easing-smooth);
-  
-  /* Hardware acceleration */
-  transform: translateZ(0);
-  will-change: opacity;
-  
+.sidebar__content,
+.right-sidebar__content {
   display: flex;
   flex-direction: column;
+  width: var(--sidebar-width);
   height: 100%;
+  padding-top: var(--space-4);
 }
 
-.sidebar.is-visible .sidebar__content {
-  opacity: 1;
-  transition-delay: 0.05s; /* Slight delay for staggered effect */
-}
-
-/* Sidebar header */
-.sidebar__header {
+.sidebar__header,
+.right-sidebar__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 20px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--color-light-shadow);
+  min-height: var(--icon-button-size-sm);
+  padding: 0 var(--space-4);
+  margin-bottom: var(--space-3);
 }
 
-.sidebar__title {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
+.sidebar__title,
+.right-sidebar__title {
   margin: 0;
 }
 
-.sidebar__add-tab {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  background: transparent;
-  border-radius: 50%;
-  cursor: pointer;
-  color: var(--color-text-secondary);
-  
-  /* Smooth button transitions */
-  transition: 
-    transform var(--transition-duration-fast) var(--transition-easing-bounce),
-    background-color var(--transition-duration-fast) var(--transition-easing),
-    color var(--transition-duration-fast) var(--transition-easing);
-  
-  /* Hardware acceleration */
-  transform: translateZ(0);
-  will-change: transform, background-color, color;
-}
-
-.sidebar__add-tab:hover {
-  background-color: rgba(142, 130, 255, 0.1);
-  color: var(--color-accent);
-  transform: scale(1.1) translateZ(0);
-}
-
-.sidebar__add-tab:active {
-  transform: scale(0.95) translateZ(0);
-  transition-duration: 0.1s; /* Faster response on active */
-}
-
-.sidebar__add-tab svg {
-  width: 16px;
-  height: 16px;
-  
-  /* Smooth icon transitions */
-  transition: 
-    transform var(--transition-duration-fast) var(--transition-easing);
-  
-  /* Hardware acceleration */
-  transform: translateZ(0);
-  will-change: transform;
-}
-
-.sidebar__add-tab:hover svg {
-  transform: rotate(90deg) translateZ(0);
-}
-
-/* Tab list */
-.sidebar__tab-list {
+.sidebar__tab-list,
+.right-sidebar__tab-list {
   flex: 1;
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  border-top: var(--border-hairline);
 }
 
-/* Individual tab */
-.sidebar__tab {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-  background: transparent;
-  border: none;
-  text-align: left;
-  color: var(--color-text-secondary);
-  
-  /* Smooth tab transitions */
-  transition: 
-    background-color var(--transition-duration-fast) var(--transition-easing),
-    transform var(--transition-duration-fast) var(--transition-easing-bounce),
-    box-shadow var(--transition-duration-fast) var(--transition-easing);
-  
-  /* Hardware acceleration */
-  transform: translateZ(0);
-  will-change: background-color, transform, box-shadow;
+/* In the tab list the last row keeps its rule, so the list has an end. */
+.sidebar__tab-list .row:last-child,
+.right-sidebar__tab-list .row:last-child {
+  border-bottom: var(--border-hairline);
 }
 
-.sidebar__tab:hover {
-  background-color: rgba(142, 130, 255, 0.05);
-  transform: translateX(4px) translateZ(0);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+/* Tabs panel: "Open a site" input. */
+.right-sidebar__new-tab-input {
+  position: relative;
+  padding: 0 var(--space-4);
+  margin-bottom: var(--space-3);
 }
 
-.sidebar__tab.is-active {
-  background-color: rgba(142, 130, 255, 0.1);
-  color: var(--color-accent);
-  box-shadow: 0 2px 12px rgba(142, 130, 255, 0.15);
-  transform: translateX(4px) translateZ(0);
-}
-
-.sidebar__tab-icon {
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  flex-shrink: 0;
-  
-  /* Smooth icon transitions */
-  transition: 
-    transform var(--transition-duration-fast) var(--transition-easing);
-  
-  /* Hardware acceleration */
-  transform: translateZ(0);
-  will-change: transform;
-}
-
-.sidebar__tab:hover .sidebar__tab-icon {
-  transform: scale(1.1) translateZ(0);
-}
-
-.sidebar__tab.is-active .sidebar__tab-icon {
-  transform: scale(1.1) translateZ(0);
-}
-
-.sidebar__tab-title {
-  flex: 1;
+.right-sidebar__url-input {
+  width: 100%;
+  height: var(--icon-button-size);
+  padding: 0 var(--space-2);
+  border: var(--border-hairline);
+  background-color: var(--color-ground);
+  color: var(--color-ink);
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  margin: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  
-  /* Smooth text transitions */
-  transition: 
-    color var(--transition-duration-fast) var(--transition-easing);
-  
-  will-change: color;
+  transition: border-color var(--duration-hover) var(--ease-hover);
 }
 
-.sidebar__tab-count {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
-  background-color: rgba(0, 0, 0, 0.05);
-  padding: 1px 4px;
-  border-radius: 3px;
-  min-width: 16px;
-  text-align: center;
-  
-  /* Smooth count transitions */
-  transition: 
-    background-color var(--transition-duration-fast) var(--transition-easing),
-    color var(--transition-duration-fast) var(--transition-easing);
-  
-  will-change: background-color, color;
+.right-sidebar__url-input:focus {
+  border-color: var(--color-ink);
 }
 
-.sidebar__tab.is-active .sidebar__tab-count {
-  background-color: var(--color-accent);
-  color: white;
+.right-sidebar__url-input::placeholder {
+  color: var(--color-ink-faint);
 }
 
-.sidebar__tab-close {
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  background: transparent;
-  border-radius: 50%;
-  cursor: pointer;
-  color: var(--color-text-tertiary);
-  opacity: 0;
-  
-  /* Smooth close button transitions */
-  transition: 
-    opacity var(--transition-duration-fast) var(--transition-easing),
-    background-color var(--transition-duration-fast) var(--transition-easing),
-    transform var(--transition-duration-fast) var(--transition-easing-bounce);
-  
-  /* Hardware acceleration */
-  transform: translateZ(0);
-  will-change: opacity, background-color, transform;
+/* Suggestion lists (tabs panel and query box). */
+.suggestions {
+  position: absolute;
+  top: 100%;
+  z-index: 1000;
+  display: none;
+  max-height: var(--height-list-max);
+  overflow-y: auto;
+  margin-top: -1px;
 }
 
-.sidebar__tab:hover .sidebar__tab-close {
-  opacity: 1;
+.right-sidebar__autocomplete {
+  left: var(--space-4);
+  right: var(--space-4);
 }
-
-.sidebar__tab-close:hover {
-  background-color: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-  transform: scale(1.1) translateZ(0);
-}
-
-.sidebar__tab-close:active {
-  transform: scale(0.9) translateZ(0);
-  transition-duration: 0.1s; /* Faster response on active */
-}
-
-.sidebar__tab-close::before {
-  content: "×";
-  font-size: 16px;
-  font-weight: bold;
-  line-height: 1;
-}
-
-/* Empty state */
-.sidebar__empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 20px;
-  text-align: center;
-  color: var(--color-text-tertiary);
-  
-  /* Smooth empty state transitions */
-  transition: 
-    opacity var(--transition-duration-normal) var(--transition-easing-smooth);
-  
-  will-change: opacity;
-}
-
-.sidebar__empty-icon {
-  font-size: 32px;
-  margin-bottom: 12px;
-  opacity: 0.6;
-  
-  /* Smooth icon transitions */
-  transition: 
-    opacity var(--transition-duration-fast) var(--transition-easing),
-    transform var(--transition-duration-fast) var(--transition-easing);
-  
-  /* Hardware acceleration */
-  transform: translateZ(0);
-  will-change: opacity, transform;
-}
-
-.sidebar__empty-state:hover .sidebar__empty-icon {
-  opacity: 1;
-  transform: scale(1.1) translateZ(0);
-}
-
-.sidebar__empty-text {
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-medium);
-  margin-bottom: 4px;
-}
-
-.sidebar__empty-hint {
-  font-size: var(--font-size-sm);
-  opacity: 0.7;
-} 

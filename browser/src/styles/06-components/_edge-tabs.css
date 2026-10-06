@@ -1,0 +1,48 @@
+/* Thin labelled tabs on the left and right edges so newcomers can find the
+   hidden panels. Hover, click or keyboard focus opens the panel; the tab fades
+   while its panel is open (body.tasks-open / body.tabs-open, set by app.js). */
+.edge-tab {
+  position: fixed;
+  top: calc(50% - var(--edge-tab-height) / 2);
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--edge-tab-width);
+  height: var(--edge-tab-height);
+  padding: 0;
+  border: var(--border-hairline);
+  background-color: var(--color-ground);
+  color: var(--color-ink-muted);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--letter-spacing-label);
+  text-transform: uppercase;
+  writing-mode: vertical-rl;
+  cursor: pointer;
+  transition:
+    opacity var(--duration-panel) var(--ease-panel),
+    background-color var(--duration-hover) var(--ease-hover),
+    color var(--duration-hover) var(--ease-hover);
+}
+
+.edge-tab:hover {
+  background-color: var(--color-ink);
+  color: var(--color-ground);
+}
+
+.edge-tab--left {
+  left: 0;
+  border-left: none;
+}
+
+.edge-tab--right {
+  right: 0;
+  border-right: none;
+}
+
+body.tasks-open .edge-tab--left,
+body.tabs-open .edge-tab--right {
+  opacity: 0;
+  pointer-events: none;
+}

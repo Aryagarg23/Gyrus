@@ -1,7 +1,31 @@
+/* One spacing scale: 4 / 8 / 12 / 16 / 24 / 32 / 48 px. Every margin, padding
+   and gap in the shell uses these. Component sizes are below. */
 :root {
-  --header-element-height: 48px; /* Increased to 48px for proper traffic light circles */
-  --header-element-padding: 8px; /* Padding to subtract from header height for sub-elements */
-  --header-element-content-height: calc(var(--header-element-height) - (var(--header-element-padding) * 2)); /* 32px for sub-elements */
-  --space-4: 1rem;     /* 16px */
-  --space-5: 1.25rem;  /* 20px */
-} 
+  --space-1: 0.25rem;  /* 4  */
+  --space-2: 0.5rem;   /* 8  */
+  --space-3: 0.75rem;  /* 12 */
+  --space-4: 1rem;     /* 16 */
+  --space-5: 1.5rem;   /* 24 */
+  --space-6: 2rem;     /* 32 */
+  --space-7: 3rem;     /* 48 */
+
+  /* Sizes (not spacing). app.js uses the header and sidebar numbers too. */
+  --header-element-height: 48px;
+  --header-element-content-height: 32px;   /* header controls: 48 - 2 x 8 */
+  --sidebar-width: 200px;
+  --row-height: 44px;                      /* every task and tab row */
+  --icon-button-size: 32px;
+  --icon-button-size-sm: 24px;
+  --icon-size: 16px;
+  --page-status-height: 32px;
+  --edge-tab-width: 24px;
+  --edge-tab-height: 72px;
+  --edge-hover-zone: 5px;                  /* app.js EDGE_PX */
+
+  /* Content widths. */
+  --width-measure: 40rem;                  /* query box, intro, preview card */
+  --width-wide: 56rem;                     /* editor mode, memory modal */
+  --width-menu: 14rem;
+  --height-editor: 15rem;
+  --height-list-max: 18rem;                /* suggestion lists */
+}

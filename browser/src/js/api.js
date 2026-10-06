@@ -3,7 +3,9 @@
 // searchQuery(query), addLinks(payload), getGraph() first try the real Flask API
 // on http://127.0.0.1:5000 with the same request shapes app.js always used. If the
 // backend is not there, or a call fails, they fall back to a local demo
-// implementation and set window.GYRUS_DEMO = true.
+// implementation and set window.GYRUS_DEMO = true. With the real backend, a
+// search is /api/search then /api/new-query (query + intent), so the memory
+// graph gets its Concept nodes; demo mode records the same shape locally.
 //
 // Reachability: GET /api/health with a 1.5s timeout, cached for 20s. Only a 200
 // with {"ok": true} counts, because on macOS the AirPlay Receiver also listens on
@@ -30,25 +32,26 @@
     window.dispatchEvent(new CustomEvent('gyrus:mode', { detail: { demo: on } }));
   }
 
-  // Plain text, minimal style; restyled later.
+  // Bottom-left note; styles in styles/06-components/_demo-indicator.css.
   function renderIndicator() {
     if (!document.body) return;
     let el = document.getElementById('gyrus-demo-indicator');
     if (!window.GYRUS_DEMO) {
-      if (el) el.style.display = 'none';
+      if (el) el.hidden = true;
       return;
     }
     if (!el) {
       el = document.createElement('div');
       el.id = 'gyrus-demo-indicator';
+      el.className = 'demo-indicator';
       el.setAttribute('role', 'status');
-      el.style.cssText =
-        'position:fixed;left:8px;bottom:8px;z-index:9999;padding:2px 6px;' +
-        'background:#fff;color:#222;border:1px solid #ccc;font:12px/1.4 sans-serif;pointer-events:none;';
-      el.textContent = 'Demo mode: no backend running';
+      const label = document.createElement('span');
+      label.className = 'label';
+      label.textContent = 'Demo mode.';
+      el.append(label, ' No backend running, so the crews return search links instead of results.');
       document.body.appendChild(el);
     }
-    el.style.display = 'block';
+    el.hidden = false;
   }
 
   // ---------------------------------------------------------------------------
@@ -155,10 +158,10 @@
   // ---------------------------------------------------------------------------
   function demoCrewLinks(query, intent) {
     const q = encodeURIComponent(query);
-    const crew = intent === 'Research' ? 'Research' : 'News';
+    const crew = intent === 'Research' ? 'research' : 'news';
     const note = (source) =>
-      `Demo stand-in for the ${crew} crew: a live ${source} search for this query. ` +
-      'With the backend running, the crew reads results and picks links itself.';
+      `A live ${source} search for this query. This is a demo stand-in: with the ` +
+      `backend running, the ${crew} crew reads the results and picks the links itself.`;
     if (intent === 'Research') {
       return [
         { title: `arXiv: search for ${query}`, link: `https://arxiv.org/search/?query=${q}&searchtype=all`, snippet: note('arXiv') },
@@ -234,10 +237,30 @@
   // ---------------------------------------------------------------------------
   const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
+  // backend/src/app.py /api/new-query files the query under a Concept node
+  // (creating the Concept if nothing similar exists). It needs the intent, so it
+  // runs after /api/search and before any /api/add-links for the same query.
+  // A failure here is logged, not surfaced: the search result is still good.
+  async function recordNewQuery(query, intent) {
+    try {
+      await callReal('/api/new-query', {
+        method: 'POST',
+        headers: JSON_HEADERS,
+        body: JSON.stringify({ query, intent }),
+      }, 60000);
+    } catch (err) {
+      console.warn(`[api] new-query failed (${err.message}); the search still worked`);
+    }
+  }
+
   async function searchQuery(query) {
     return withFallback(
       'search',
-      () => callReal('/api/search', { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ query }) }, 180000),
+      async () => {
+        const data = await callReal('/api/search', { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ query }) }, 180000);
+        await recordNewQuery(query, (data && data.intent) || 'Answer');
+        return data;
+      },
       () => {
         // Same shape as backend/src/app.py /api/search.
         const intent = classifyIntent(query);

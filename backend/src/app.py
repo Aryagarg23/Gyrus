@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from backend.src.db_schema import Query, Link
+from backend.src.db_schema import Query, Link, Concept
 from backend.src.fivedvector import collect_all_intent
 from backend.MCP.newscrew_http import run as news_run
 from backend.MCP.researchcrew import run as res_run
@@ -65,14 +65,20 @@ def query_adder():
 
         q = Query(query, intent)
         sim_concepts = find_similar_concepts(q)
+        if isinstance(sim_concepts, str):
+            # run_db_query returns an error string instead of raising
+            raise RuntimeError(sim_concepts)
 
-        if sim_concepts[0].get('similarity') < 0.35:
+        # Empty DB (no Concept nodes yet): sim_concepts is [], so [0] raised
+        # IndexError. Untested against a live Neo4j.
+        if not sim_concepts or (sim_concepts[0].get('similarity') or 0) < 0.35:
             create_concept(q)
 
         else:
             for i in sim_concepts:
-                if i.get('similarity') > 0.40:
-                    connect_concept_to_query(q, i)
+                if (i.get('similarity') or 0) > 0.40:
+                    # connect_concept_to_query reads concept.name; rows are dicts
+                    connect_concept_to_query(q, Concept(i.get('name'), i.get('intent'), None))
 
         return jsonify('Success!'), 200
 

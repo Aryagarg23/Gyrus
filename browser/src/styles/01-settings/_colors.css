@@ -1,15 +1,56 @@
+/* Presentation Identity colour tokens. Light by default, dark via
+   prefers-color-scheme, and :root[data-theme] forces either one.
+   Blue is for technical emphasis only (selected graph node, focus ring).
+   Hot is for warnings only. Muted text is ink mixed down, never a gray. */
 :root {
-  /* Base Pastel Material (Soft Lavender) */
-  --color-base:rgb(32, 33, 36);
+  --color-ground: #eae4d6;
+  --color-surface: #f2ede2;
+  --color-ink: #282215;
+  --color-hairline: #c6b99f;
+  --color-blue: #3b42db;
+  --color-hot: #e85b30;
+  color-scheme: light;
+}
 
-  /* Shadow & Highlight Colors (derived from base) */
-  --color-light-shadow:rgb(56, 51, 51);
-  --color-dark-shadow:rgb(65, 65, 68);
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-ground: #1c1c1c;
+    --color-surface: #232322;
+    --color-ink: #f1ede4;
+    --color-hairline: #4a4640;
+    --color-blue: #6f76ec;
+    --color-hot: #d95526;
+    color-scheme: dark;
+  }
+}
 
-  /* Text Colors */
-  --color-text-primary:rgb(255, 255, 255);
-  --color-text-secondary:rgb(255, 255, 255);
-  
-  /* Accent Color (for interactive states or highlights) */
-  --color-accent:rgb(187, 134, 252);
-} 
+:root[data-theme="dark"] {
+  --color-ground: #1c1c1c;
+  --color-surface: #232322;
+  --color-ink: #f1ede4;
+  --color-hairline: #4a4640;
+  --color-blue: #6f76ec;
+  --color-hot: #d95526;
+  color-scheme: dark;
+}
+
+:root {
+  /* Derived. Declared on :root so they follow the theme overrides above. */
+  --color-ink-muted: color-mix(in srgb, var(--color-ink) 60%, transparent);
+  --color-ink-faint: color-mix(in srgb, var(--color-ink) 45%, transparent);
+  --color-ink-wash: color-mix(in srgb, var(--color-ink) 6%, transparent);
+  --border-hairline: 1px solid var(--color-hairline);
+  --border-ink: 1px solid var(--color-ink);
+  --radius: 0;
+}
+
+/* Aliases read by the About panel (_about-panel.css, owned separately), so it
+   follows the same theme, including :root[data-theme] overrides. */
+:root {
+  --pi-ground: var(--color-ground);
+  --pi-surface: var(--color-surface);
+  --pi-ink: var(--color-ink);
+  --pi-hairline: var(--color-hairline);
+  --pi-blue: var(--color-blue);
+  --pi-hot: var(--color-hot);
+}

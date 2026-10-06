@@ -1,117 +1,86 @@
-/* Layout System */
+/* Layout: header on top, then [left sidebar | content area | right sidebar].
+   Header and both sidebars are hidden until the pointer reaches an edge
+   (app.js setupHeaderVisibility). The open page is position:fixed and
+   placed by app.js updateWebviewPosition so it never sits under a panel. */
 .app-header {
-  position: relative; /* Position relatively so it takes up layout space */
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
+  height: var(--header-element-height);
   padding: 0 var(--space-4);
-  height: var(--header-element-height); /* Start visible by default */
-  background-color: var(--color-base);
-  
-  /* Smooth header transitions */
-  transition: 
-    height var(--transition-duration-normal) var(--transition-easing-smooth),
-    opacity var(--transition-duration-normal) var(--transition-easing-smooth);
-  
-  /* Hardware acceleration */
-  transform: translateZ(0);
-  will-change: height, opacity;
-  
-  width: 100%; /* Ensure full width */
-  box-sizing: border-box; /* Include padding in width calculation */
-  overflow: hidden; /* Hide content when height is 0 */
-  opacity: 1; /* Start visible */
-}
-
-/* Drag button that covers entire header area */
-.header-drag-button {
-  position: absolute;
-  top: 0.5px; /* Leave small gap at top for native window controls */
-  right: 0;
-  bottom: 0;
-  background-color: transparent;
-  border: none;
-  outline: none;
-  cursor: default;
-  z-index: 0;
-  left: 50px;
-  -webkit-app-region: drag; /* Make the button draggable */
-  pointer-events: auto;
-}
-
-/* Ensure header content is above the drag button */
-.app-header > *:not(.header-drag-button) {
-  position: relative;
-  z-index: 1;
-  -webkit-app-region: no-drag; /* Prevent content from being draggable */
+  overflow: hidden;
+  background-color: var(--color-ground);
+  border-bottom: var(--border-hairline);
+  opacity: 1;
+  transition:
+    height var(--duration-panel) var(--ease-panel),
+    opacity var(--duration-panel) var(--ease-panel);
 }
 
 .app-header:not(.is-visible) {
-  height: 0; /* Hide when not visible */
-  opacity: 0; /* Make invisible */
+  height: 0;
+  opacity: 0;
+  border-bottom-width: 0;
 }
 
-/* Main container that holds sidebar and content */
+/* Transparent button under the header content so the window can be dragged. */
+.header-drag-button {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: var(--space-7); /* leave the macOS window buttons clickable */
+  z-index: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  cursor: default;
+  -webkit-app-region: drag;
+}
+
+.app-header > *:not(.header-drag-button) {
+  position: relative;
+  z-index: 1;
+  -webkit-app-region: no-drag;
+}
+
 .main-container {
+  position: relative;
   display: flex;
   flex: 1;
   width: 100%;
-  height: calc(100vh - 48px); /* Explicit header height calculation */
-  overflow: hidden; /* Prevent scrollbars during transitions */
-  position: relative; /* For absolutely positioned children */
-  min-height: 0; /* Allow flex item to shrink below content size */
-  
-  /* Smooth container transitions */
-  transition: height var(--transition-duration-normal) var(--transition-easing-smooth);
-  
-  /* Hardware acceleration */
-  transform: translateZ(0);
-  will-change: height;
+  min-height: 0;
+  height: calc(100vh - var(--header-element-height));
+  overflow: hidden;
+  transition: height var(--duration-panel) var(--ease-panel);
 }
 
-/* When header is hidden, main container takes full height */
 .app-header:not(.is-visible) ~ .main-container {
   height: 100vh;
 }
 
-/* Ensure content area fills the main container properly */
 .content-area {
+  position: relative;
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center; /* Center vertically */
-  align-items: center;     /* Center horizontally */
+  justify-content: center;
+  align-items: center;
   height: 100%;
-  min-height: 0; /* Allow it to shrink properly */
-  background-color: var(--color-base);
+  min-height: 0;
   padding: 0;
-  
-  /* Smooth content area transitions */
-  transition: margin-left var(--transition-duration-normal) var(--transition-easing-smooth);
-  
-  /* Hardware acceleration */
-  transform: translateZ(0);
-  will-change: margin-left;
-  
-  position: relative;
-  overflow: hidden; /* Prevent scrollbars */
+  overflow: hidden;
+  background-color: var(--color-ground);
 }
 
-/* Center the query input container in the content area vertically and horizontally */
-
-/* When webview is active, hide the query input container and adjust layout */
 .content-area.has-active-webview {
-  justify-content: flex-start; /* Don't center content when webview is active */
-  align-items: stretch; /* Stretch content to fill width */
-  height: 100%; /* Ensure full height */
-  min-height: 100%; /* Ensure minimum height */
+  justify-content: flex-start;
+  align-items: stretch;
 }
 
-.content-area.has-active-webview #query-input-container {
-  display: none;
-}
-
-/* Show webview when active */
+/* The page layer is hidden until a page is open. */
 .webview-container {
   display: none;
 }
@@ -120,26 +89,33 @@
   display: block;
 }
 
-/* Adjust content area when sidebar is visible */
-.sidebar.is-visible ~ .content-area {
-  margin-left: 0; /* No margin needed since sidebar is in normal flow */
-}
-
-/* Remove the complex pseudo-element hover detection */
-/* .content-area::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 20px;
-  z-index: 10;
+/* Query box + intro, centred. When a page is open only the collapsed
+   "Search" button (position:fixed) remains, so this wrapper takes no space. */
+#query-input-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-5);
+  padding: 0 var(--space-4);
   pointer-events: none;
 }
 
-.content-area:hover::before {
+#query-input-container > * {
   pointer-events: auto;
-} */
+}
+
+.content-area.has-active-webview #query-input-container {
+  position: absolute;
+  width: 0;
+  height: 0;
+  padding: 0;
+  overflow: visible;
+}
+
+.content-area.has-active-webview .query-intro {
+  display: none;
+}
 
 .is-hidden {
   height: 0 !important;
@@ -147,101 +123,34 @@
   pointer-events: none;
 }
 
-/* Center the query input container in the content area */
-#query-input-container {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin: 0; /* Remove vertical margin for perfect centering */
-  pointer-events: none; /* Let the inner input handle pointer events */
-}
-
-#query-input-container > .query-input-container {
-  pointer-events: auto; /* Allow interaction with the input */
-}
-
-/* Platform-specific layouts are now in separate files:
-   - 07-platforms/_macos.css
-   - 07-platforms/_windows.css
-*/
-
-/* Focus overlay - moved to _focus-mode.css */
-
-/* Hover detection zones for header and sidebar */
+/* Thin strips along the edges that catch the pointer above the page layer. */
 .hover-detection-zone {
   position: absolute;
-  pointer-events: none;
-  z-index: 100; /* Higher z-index to be above webview */
-  
-  /* Smooth detection zone transitions */
-  transition: all var(--transition-duration-normal) var(--transition-easing-smooth);
-  
-  /* Hardware acceleration */
-  transform: translateZ(0);
-  will-change: all;
+  z-index: 100;
+  pointer-events: auto;
 }
 
 .hover-detection-zone--top {
   top: 0;
   left: 0;
   right: 0;
-  height: 5px; /* Reduced to 5px */
+  height: var(--edge-hover-zone);
 }
 
 .hover-detection-zone--left {
   top: 0;
   left: 0;
-  width: 5px; /* Reduced to 5px */
   bottom: 0;
+  width: var(--edge-hover-zone);
 }
 
 .hover-detection-zone--right {
   top: 0;
   right: 0;
-  width: 5px; /* Reduced to 5px */
   bottom: 0;
+  width: var(--edge-hover-zone);
 }
 
-/* Enable pointer events for detection zones */
-.hover-detection-zone--top,
-.hover-detection-zone--left,
-.hover-detection-zone--right {
-  pointer-events: auto;
-}
-
-
-
-/* When webview is active, ensure hover zones are above the webview */
-.content-area.has-active-webview .hover-detection-zone {
-  z-index: 100; /* Higher than webview but lower than header */
-}
-
-/* Expand hover zones when elements are visible */
 .app-header.is-visible ~ .main-container .content-area .hover-detection-zone--top {
-  height: var(--header-element-height); /* Expand to full header height */
+  height: var(--header-element-height);
 }
-
- 
-
-/* -------------------------------------------------------------------------- */
-/*                        06-components/_buffer-button.css                     */
-/* -------------------------------------------------------------------------- */
-
-.buffer-button {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 20px; /* Same as the trigger zone */
-  background: transparent;
-  border: none;
-  cursor: default;
-  z-index: -1; /* Behind all other header content */
-  pointer-events: none; /* Don't interfere with other interactions */
-}
-
-/* Only enable pointer events when header is visible to prevent glitching */
-.app-header.is-visible .buffer-button {
-  pointer-events: auto;
-} 

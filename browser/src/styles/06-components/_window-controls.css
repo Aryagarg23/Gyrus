@@ -1,27 +1,18 @@
+/* Custom window buttons. Only shown in Electron (platform.js hides them in a
+   plain browser). Platform layouts live in 07-platforms/. */
 .window-controls {
   display: flex;
-  align-items: center; /* Vertically center the buttons */
-  -webkit-app-region: no-drag; /* Ensures the buttons are clickable */
+  align-items: center;
+  flex: 0 0 auto;
   height: var(--header-element-content-height);
-  box-sizing: border-box;
-  flex: 0 0 auto; /* Don't grow, don't shrink, use natural size */
+  -webkit-app-region: no-drag;
 }
 
 .window-controls__button {
-  flex: 1; /* Each button takes equal width */
-  height: 100%; /* Full height of the container */
-  border: none;
-  cursor: pointer;
-  background: transparent;
-  transition: all var(--transition-duration-fast) ease-in-out;
   position: relative;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
 }
-
-.window-controls__button:active {
-  box-shadow: var(--shadow-neumorphic-inset);
-}
-
-/* Platform-specific window controls styling is now in separate files:
-   - 07-platforms/_macos.css
-   - 07-platforms/_windows.css
-*/ 

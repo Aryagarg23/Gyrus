@@ -1,155 +1,64 @@
 /* -------------------------------------------------------------------------- */
-/*                        07-platforms/_macos.css                             */
+/*   07-platforms/_macos.css: window buttons left, navigation right.          */
 /* -------------------------------------------------------------------------- */
 
-/* macOS-specific layout adjustments */
 .platform-macos .app-header {
-  /* macOS: Window controls on left, navigation on right */
   justify-content: flex-start;
-  /* Ensure no default macOS traffic lights interfere */
+  padding-left: 0;
   -webkit-app-region: drag;
-  padding-left: 0 !important;
-}
-
-.platform-macos .window-controls {
-  margin-right: var(--space-4);
-  flex: 0 0 auto; /* Don't grow, don't shrink, use natural size */
-  margin-left: 0 !important;
 }
 
 .platform-macos .url-bar {
-  flex: 1 1 auto; /* Take up all remaining space, allow growing and shrinking */
   margin: 0 var(--space-4);
-  max-width: none; /* Allow unlimited growth */
 }
 
 .platform-macos .header__controls-right {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
-  flex: 0 0 auto; /* Don't grow, don't shrink, use natural size */
-  min-width: 140px; /* Ensure minimum width for menu + navigation controls */
+  gap: var(--space-1);
+  flex: 0 0 auto;
 }
 
-/* Hide default macOS traffic lights if they appear */
-.platform-macos .app-header::before,
-.platform-macos .app-header::after {
-  display: none !important;
-}
-
-/* --- Electron macOS traffic light safe area override --- */
-/*
-  Electron always reserves space for the traffic lights on macOS when using titleBarStyle: 'hidden' or 'hiddenInset',
-  even if you hide them with setWindowButtonVisibility(false). This CSS ensures your custom window controls are flush left
-  for all users, including fresh installs.
-*/
-.platform-macos .app-header {
-  /* Use max(0px, env(safe-area-inset-left)) for notched Macs, but 0 is fine for most */
-  padding-left: 0 !important;
-  margin-left: 0 !important;
+.platform-macos .nav-controls-container {
+  margin-right: var(--space-3);
 }
 
 .platform-macos .window-controls {
-  margin-left: 0 !important;
-  padding-left: 0 !important;
+  gap: var(--space-2);
+  padding: 0 var(--space-4);
 }
 
-/* macOS Window Controls */
-.platform-macos .window-controls {
+/* Traffic lights keep their native colours and round shape: the one place
+   in the shell with a radius or non-token colours, by design. */
+.platform-macos .window-controls__button {
+  width: var(--space-3);
+  height: var(--space-3);
+  flex: 0 0 var(--space-3);
+  border-radius: 50%;
+}
+
+.platform-macos .window-controls__button--close { background-color: #ff5f56; }
+.platform-macos .window-controls__button--minimize { background-color: #ffbd2e; }
+.platform-macos .window-controls__button--maximize { background-color: #27c93f; }
+
+.platform-macos .window-controls__button::before {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
-  gap: 6px;
-  -webkit-app-region: no-drag;
-  height: var(--header-element-content-height);
-  box-sizing: border-box;
-  padding: 0 8px;
-  flex: 0 0 auto;
-  min-height: 32px; /* Ensure minimum height for proper circles */
-}
-
-.platform-macos .window-controls__button {
-  width: 12px;
-  height: 12px;
-  min-width: 12px;
-  min-height: 12px;
-  border-radius: 50%;
-  border: none;
-  cursor: pointer;
-  background: transparent;
-  transition: all var(--transition-duration-fast) ease-in-out;
-  position: relative;
-  flex-shrink: 0;
-  flex-grow: 0;
-}
-
-/* macOS traffic light colors */
-.platform-macos .window-controls__button--close {
-  background-color: #ff5f56;
-}
-
-.platform-macos .window-controls__button--minimize {
-  background-color: #ffbd2e;
-}
-
-.platform-macos .window-controls__button--maximize {
-  background-color: #27c93f;
-}
-
-/* macOS hover effects */
-.platform-macos .window-controls__button:hover {
-  transform: scale(1.1);
-  filter: brightness(1.1);
-}
-
-.platform-macos .window-controls__button:active {
-  transform: scale(0.95);
-  box-shadow: var(--shadow-neumorphic-inset);
-}
-
-/* macOS button icons (subtle) */
-.platform-macos .window-controls__button--close::before {
-  content: "×";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 8px;
-  font-weight: bold;
-  color: rgba(0, 0, 0, 0.4);
+  justify-content: center;
+  font-size: var(--font-size-label);
   line-height: 1;
+  color: rgba(0, 0, 0, 0.5);
   opacity: 0;
-  transition: opacity var(--transition-duration-fast) ease-in-out;
+  transition: opacity var(--duration-hover) var(--ease-hover);
 }
 
-.platform-macos .window-controls__button--minimize::before {
-  content: "−";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 8px;
-  font-weight: bold;
-  color: rgba(0, 0, 0, 0.4);
-  line-height: 1;
-  opacity: 0;
-  transition: opacity var(--transition-duration-fast) ease-in-out;
-}
+.platform-macos .window-controls__button--close::before { content: "\00d7"; }
+.platform-macos .window-controls__button--minimize::before { content: "\2212"; }
+.platform-macos .window-controls__button--maximize::before { content: "+"; }
 
-.platform-macos .window-controls__button--maximize::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 6px;
-  height: 6px;
-  border: 1px solid rgba(0, 0, 0, 0.4);
-  border-radius: 1px;
-  transform: translate(-50%, -50%);
-  opacity: 0;
-  transition: opacity var(--transition-duration-fast) ease-in-out;
-}
-
-/* Show icons on hover */
-.platform-macos .window-controls__button:hover::before {
+.platform-macos .window-controls:hover .window-controls__button::before,
+.platform-macos .window-controls__button:focus-visible::before {
   opacity: 1;
-} 
+}

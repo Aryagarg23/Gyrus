@@ -1,21 +1,17 @@
-/* -------------------------------------------------------------------------- */
-/*                        06-components/_buffer-button.css                     */
-/* -------------------------------------------------------------------------- */
-
+/* Invisible strip at the top of the open header that keeps hover detection
+   steady while the pointer sits on the very edge. */
 .buffer-button {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 20px; /* Same as the trigger zone */
+  height: var(--space-5);
+  z-index: -1;
   background: transparent;
   border: none;
-  cursor: default;
-  z-index: -1; /* Behind all other header content */
-  pointer-events: none; /* Don't interfere with other interactions */
+  pointer-events: none;
 }
 
-/* Only enable pointer events when header is visible to prevent glitching */
 .app-header.is-visible .buffer-button {
   pointer-events: auto;
-} 
+}

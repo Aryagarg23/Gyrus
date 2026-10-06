@@ -1,11 +1,10 @@
-<div class="query-input-container">
-  <div class="query-input__text-area" contenteditable="true" data-placeholder="…"></div>
+<div class="query-input-container" title="">
+  <div class="query-input__text-area" contenteditable="true" role="textbox" aria-label="Search, or type a site" data-placeholder="Search, or type a site"></div>
   <div class="query-input__controls">
-    <button class="query-input__attach-button">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="query-input__attach-icon">
-        <path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .28-.22.5-.5.5s-.5-.22-.5-.5V6H16.5z"/>
-      </svg>
-    </button>
-    <button class="query-input__send-button">Send</button>
+    <button class="query-input__send-button button" type="button">Search</button>
   </div>
-</div> 
+</div>
+<div class="query-intro">
+  <p class="query-intro__what">Search like you normally would. Gyrus works out what you are trying to do. For research or news it sends a small crew of agents to gather sources, instead of answering for you.</p>
+  <p class="query-intro__hint label">Your tasks are on the left edge, tabs on the right, the address bar at the top.</p>
+</div>

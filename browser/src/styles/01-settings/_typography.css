@@ -1,6 +1,16 @@
+/* One type scale. Every font-size in the shell is one of these five. */
 :root {
-  --font-family-primary: 'Inter', 'Segoe UI', sans-serif;
-  --font-size-base: 1rem;   /* 16px */
+  --font-family-primary: 'Space Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-weight-regular: 400;
-  --font-weight-bold: 600;
-} 
+  --font-weight-medium: 500;
+
+  --font-size-label: 0.65rem;    /* uppercase labels */
+  --font-size-sm: 0.8rem;        /* small text, rows, buttons */
+  --font-size-base: 0.9rem;      /* body */
+  --font-size-title: 1.1rem;     /* panel and modal titles, editor text */
+  --font-size-display: 1.6rem;   /* preview card title */
+
+  --line-height-base: 1.5;
+  --line-height-tight: 1.2;
+  --letter-spacing-label: 0.14em;
+}

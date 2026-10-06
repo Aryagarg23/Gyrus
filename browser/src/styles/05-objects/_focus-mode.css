@@ -1,30 +1,15 @@
-/* -------------------------------------------------------------------------- */
-/*                        05-objects/_focus-mode.css                        */
-/* -------------------------------------------------------------------------- */
-
+/* Overlay behind the query box in editor mode (long queries). Flat wash, no blur. */
 .focus-overlay {
   position: fixed;
-  inset: 0; /* Cover the entire viewport */
-  background-color: rgba(0, 0, 0, 0.4); /* Darker, more consistent overlay */
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  z-index: 1500; /* High z-index but below collapsed query input */
-  
-  /* Hidden by default */
+  inset: 0;
+  z-index: 1500;
+  background-color: color-mix(in srgb, var(--color-ground) 85%, transparent);
   opacity: 0;
   pointer-events: none;
-  
-  /* Smooth transition */
-  transition: 
-    opacity var(--transition-duration-normal) var(--transition-easing-smooth),
-    backdrop-filter var(--transition-duration-normal) var(--transition-easing-smooth);
-  
-  /* Hardware acceleration */
-  transform: translateZ(0);
-  will-change: opacity, backdrop-filter;
+  transition: opacity var(--duration-panel) var(--ease-panel);
 }
 
 .focus-overlay.is-active {
   opacity: 1;
-  pointer-events: auto; /* Enable pointer events to block background interactions */
-} 
+  pointer-events: auto;
+}

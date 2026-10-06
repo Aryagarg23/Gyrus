@@ -1,0 +1,203 @@
+/* -------------------------------------------------------------------------- */
+/*   06-components/_controls.css: the shared vocabulary.                      */
+/*   Buttons come in three styles: .button (outline), .button--text,          */
+/*   .icon-button. Lists use .row. Floating surfaces use .panel.              */
+/* -------------------------------------------------------------------------- */
+
+/* Outline button: ink outline, inverts on hover. Never blue or hot. */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--icon-button-size);
+  padding: 0 var(--space-4);
+  border: var(--border-ink);
+  background: transparent;
+  color: var(--color-ink);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-hover) var(--ease-hover),
+    color var(--duration-hover) var(--ease-hover);
+}
+
+.button:hover,
+.button.is-active {
+  background-color: var(--color-ink);
+  color: var(--color-ground);
+}
+
+/* Text button: no box until hover. Used for menu items. */
+.button--text {
+  justify-content: flex-start;
+  width: 100%;
+  min-height: var(--row-height);
+  border: none;
+  font-weight: var(--font-weight-regular);
+  text-align: left;
+}
+
+/* Icon button: a square with a hairline that inverts on hover. */
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: var(--icon-button-size);
+  height: var(--icon-button-size);
+  padding: 0;
+  border: var(--border-hairline);
+  background: transparent;
+  color: var(--color-ink);
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  transition:
+    background-color var(--duration-hover) var(--ease-hover),
+    border-color var(--duration-hover) var(--ease-hover),
+    color var(--duration-hover) var(--ease-hover);
+}
+
+.icon-button--sm {
+  width: var(--icon-button-size-sm);
+  height: var(--icon-button-size-sm);
+}
+
+.icon-button:hover,
+.icon-button.is-active {
+  background-color: var(--color-ink);
+  border-color: var(--color-ink);
+  color: var(--color-ground);
+}
+
+.icon {
+  width: var(--icon-size);
+  height: var(--icon-size);
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  pointer-events: none;
+}
+
+/* Panel: every surface that floats or slides (sidebars, modal, menu, lists). */
+.panel {
+  background-color: var(--color-surface);
+  border: var(--border-hairline);
+}
+
+/* Row: every list item (tasks, tabs, suggestions). Same height, padding,
+   hover and active state everywhere. */
+.row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--row-height);
+  padding: var(--space-1) var(--space-4);
+  border-bottom: var(--border-hairline);
+  color: var(--color-ink);
+  cursor: pointer;
+  transition: background-color var(--duration-hover) var(--ease-hover);
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.row:hover,
+.row.is-selected {
+  background-color: var(--color-ink-wash);
+}
+
+/* Active: a 2px ink rule on the leading edge. */
+.row.is-active {
+  background-color: var(--color-ground);
+}
+
+.row.is-active::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  background-color: var(--color-ink);
+}
+
+/* Rows sit inside panels that clip overflow, so their focus ring is inset. */
+.row:focus-visible {
+  outline-offset: -2px;
+}
+
+.row__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.row__title {
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-regular);
+}
+
+.row.is-active .row__title {
+  font-weight: var(--font-weight-medium);
+}
+
+.row__meta {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.row__count {
+  min-width: var(--icon-button-size-sm);
+  padding: 0 var(--space-1);
+  border: var(--border-hairline);
+  font-size: var(--font-size-label);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: var(--color-ink-muted);
+}
+
+.row__icon {
+  width: var(--icon-size);
+  height: var(--icon-size);
+  flex: 0 0 auto;
+  border: var(--border-hairline);
+  overflow: hidden;
+}
+
+.row__icon img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* The row's close button shows on hover or keyboard focus. */
+.row__close {
+  opacity: 0;
+  border-color: transparent;
+}
+
+.row:hover .row__close,
+.row:focus-within .row__close {
+  opacity: 1;
+}
+
+.empty-note {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--color-ink-muted);
+}

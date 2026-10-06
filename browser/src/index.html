@@ -4,9 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0" />
     <title>Gyrus</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500&display=swap" />
     <!-- ITCSS: Settings -->
     <link rel="stylesheet" href="styles/01-settings/_colors.css" />
-    <link rel="stylesheet" href="styles/01-settings/_shadows.css" />
     <link rel="stylesheet" href="styles/01-settings/_typography.css" />
     <link rel="stylesheet" href="styles/01-settings/_spacing.css" />
     <link rel="stylesheet" href="styles/01-settings/_transitions.css" />
@@ -16,18 +18,18 @@
     <link rel="stylesheet" href="styles/05-objects/_layout.css" />
     <link rel="stylesheet" href="styles/05-objects/_focus-mode.css" />
     <!-- ITCSS: Components -->
+    <link rel="stylesheet" href="styles/06-components/_controls.css" />
     <link rel="stylesheet" href="styles/06-components/_query-input.css" />
     <link rel="stylesheet" href="styles/06-components/_webview.css" />
     <link rel="stylesheet" href="styles/06-components/_window-controls.css" />
     <link rel="stylesheet" href="styles/06-components/_url-bar.css" />
     <link rel="stylesheet" href="styles/06-components/_menu-button.css" />
-    <link rel="stylesheet" href="styles/06-components/_nav-controls.css" />
     <link rel="stylesheet" href="styles/06-components/_sidebar.css" />
-    <link rel="stylesheet" href="styles/06-components/_right-sidebar.css" />
     <link rel="stylesheet" href="styles/06-components/_buffer-button.css" />
-    <link rel="stylesheet" href="styles/06-components/_network-button.css" />
     <link rel="stylesheet" href="styles/06-components/_network-modal.css" />
-    <link rel="stylesheet" href="styles/06-components/_window-controls-macos.css" />
+    <link rel="stylesheet" href="styles/06-components/_edge-tabs.css" />
+    <link rel="stylesheet" href="styles/06-components/_demo-indicator.css" />
+    <link rel="stylesheet" href="styles/06-components/_about-panel.css" />
     <!-- ITCSS: Platforms -->
     <link rel="stylesheet" href="styles/07-platforms/_macos.css" />
     <link rel="stylesheet" href="styles/07-platforms/_windows.css" />
@@ -76,8 +78,6 @@
         <div class="hover-detection-zone hover-detection-zone--left"></div>
         <div class="hover-detection-zone hover-detection-zone--right"></div>
 
-        <!-- Test button for tab creation -->
-
         <!--Query input container-->
         <div id="query-input-container"> </div>
 
@@ -88,6 +88,10 @@
       <!-- Right sidebar component (Browser Tabs) -->
       <div id="right-sidebar-container"></div>
     </div>
+
+    <!-- Edge tabs: visible handles for the hidden panels (app.js wires them) -->
+    <button class="edge-tab edge-tab--left" type="button" title="Show your tasks">Tasks</button>
+    <button class="edge-tab edge-tab--right" type="button" title="Show the tabs in this task">Tabs</button>
 
     <!-- Network Modal -->
     <div id="network-modal-container"></div>
@@ -100,5 +104,6 @@
     <script src="js/api.js"></script>
     <script src="js/components.js"></script>
     <script src="js/app.js"></script>
+    <script src="js/easter-eggs.js"></script>
   </body>
 </html>

@@ -2,20 +2,18 @@
   <div class="right-sidebar-background"></div>
   <div class="right-sidebar__content">
     <div class="right-sidebar__header">
-      <div class="right-sidebar__new-tab-input">
-        <input 
-          type="text" 
-          class="right-sidebar__url-input" 
-          placeholder="@google search | @youtube video | example.com"
-          title="Enter @google search query or paste URL. Use | ; , to open multiple tabs"
-        />
-        <div class="right-sidebar__autocomplete" style="display: none;">
-          <!-- Autocomplete suggestions will be populated here -->
-        </div>
-      </div>
+      <h3 class="right-sidebar__title label">Tabs</h3>
     </div>
-    <div class="right-sidebar__tab-list">
-      <!-- Browser tabs will be dynamically added here -->
+    <div class="right-sidebar__new-tab-input">
+      <input
+        type="text"
+        class="right-sidebar__url-input"
+        placeholder="Open a site"
+        title="Type an address, or @google and some words. Separate several with | to open more than one."
+        aria-label="Open a site"
+      />
+      <div class="right-sidebar__autocomplete suggestions panel"></div>
     </div>
+    <div class="right-sidebar__tab-list" role="list" aria-label="Tabs"></div>
   </div>
-</div> 
+</div>
