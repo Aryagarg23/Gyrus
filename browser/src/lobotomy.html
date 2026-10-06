@@ -30,28 +30,40 @@
 
     /* ── deep fryer ───────────────────────────────────────────── */
     .fried {
-      position: relative;
-      overflow: hidden;
-      isolation: isolate;
       background:
         radial-gradient(circle at 18% 22%, var(--fry-b) 0 8%, transparent 26%),
         radial-gradient(circle at 82% 70%, var(--fry-c) 0 6%, transparent 30%),
         radial-gradient(circle at 70% 15%, var(--fry-d) 0 4%, transparent 22%),
         linear-gradient(160deg, var(--fry-a), #8a0000 60%, #ff7a00);
-      filter: contrast(1.6) saturate(2.4);
     }
-    /* grain: the "ran it through 40 filters" look */
-    .fried::after {
+
+    /* ── the fryer: run any panel through the filters ───────────
+       1. #deepfry (SVG, end of body): oversaturate, posterize into colour
+          bands, sharpen until edges ring, split the red channel off for
+          chromatic aberration, then add grain.
+       2. ::before: 8x8 JPEG macroblocks with random brightness, drawn
+          once into a canvas at load (--macroblocks).
+       3. ::after: fine film grain on top.
+       --fry sets how hard: 1 = normal deep fry. */
+    .fry {
+      position: relative;
+      overflow: hidden;
+      isolation: isolate;
+      filter: url(#deepfry) contrast(calc(1 + .6 * var(--fry, 1))) saturate(calc(1 + 1.4 * var(--fry, 1)));
+    }
+    .fry::after {
       content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.4' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
       mix-blend-mode: overlay; opacity: 0.85;
     }
     /* jpeg blocks */
-    .fried::before {
-      content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none;
-      background:
-        repeating-linear-gradient(0deg, rgba(0,0,0,.06) 0 8px, transparent 8px 16px),
-        repeating-linear-gradient(90deg, rgba(255,255,255,.05) 0 8px, transparent 8px 16px);
+    .fry::before {
+      content: ""; position: absolute; inset: 0; z-index: 6; pointer-events: none;
+      background-image: var(--macroblocks, none);
+      background-size: 256px 256px;
+      image-rendering: pixelated;
+      mix-blend-mode: hard-light;
+      opacity: calc(.55 * var(--fry, 1));
     }
     .flare {
       position: absolute; z-index: 4; width: 140px; height: 140px; border-radius: 50%; pointer-events: none;
@@ -131,7 +143,7 @@
 <body>
 
   <!-- 1. The macro -->
-  <header class="fried hero" aria-label="Meme: a deep-fried brain with a dotted cut line">
+  <header class="fry fried hero" aria-label="Meme: a deep-fried brain with a dotted cut line">
     <div class="flare" style="left:8%;top:18%"></div>
     <div class="flare" style="right:10%;top:52%"></div>
     <div class="emoji-rain" aria-hidden="true">
@@ -164,7 +176,7 @@
 
     <!-- Shrinking brain: the lobotomy in four easy steps -->
     <h2 class="section-title">Brain reduction chart (scientifically accurate)</h2>
-    <div class="galaxy fried" style="filter:contrast(1.25) saturate(1.6)">
+    <div class="galaxy fry" style="--fry:.6">
       <div class="row"><div class="say">Thinking about the problem yourself.</div>
         <div class="glow"><svg viewBox="0 0 220 180" aria-hidden="true"><path class="lobe" d="M110 22 C78 8 42 20 32 48 C12 56 10 90 26 104 C20 128 40 152 66 150 C78 166 102 166 110 152 C118 166 142 166 154 150 C180 152 200 128 194 104 C210 90 208 56 188 48 C178 20 142 8 110 22 Z"/></svg></div></div>
       <div class="row"><div class="say">Googling it.</div>
@@ -176,7 +188,7 @@
     </div>
 
     <!-- Reject / approve, no copyrighted rapper required -->
-    <div class="nah" role="img" aria-label="Meme: reject having thoughts, approve the self-lobotomy">
+    <div class="nah fry" style="--fry:.8" role="img" aria-label="Meme: reject having thoughts, approve the self-lobotomy">
       <div class="face">🙅</div><div class="txt">Having one (1) original thought</div>
       <div class="face">👉</div><div class="txt">Outsourcing the entire frontal lobe</div>
     </div>
@@ -185,6 +197,55 @@
       <a class="btn" id="go-anyway" href="#" hidden target="_blank" rel="noopener noreferrer">Proceed with lobotomy</a>
     </div>
   </main>
+
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <filter id="deepfry" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+      <feColorMatrix type="saturate" values="2.2" result="sat"/>
+      <!-- posterize: colour banding like a 40%-quality JPEG -->
+      <feComponentTransfer in="sat" result="bands">
+        <feFuncR type="discrete" tableValues="0 .2 .45 .7 .9 1"/>
+        <feFuncG type="discrete" tableValues="0 .25 .5 .75 1"/>
+        <feFuncB type="discrete" tableValues="0 .3 .6 1"/>
+      </feComponentTransfer>
+      <!-- oversharpen: halos and ringing around every edge -->
+      <feConvolveMatrix in="bands" order="3" kernelMatrix="0 -1.4 0 -1.4 6.6 -1.4 0 -1.4 0" preserveAlpha="true" result="sharp"/>
+      <!-- chromatic aberration: shove the red channel sideways -->
+      <feColorMatrix in="sharp" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="red"/>
+      <feOffset in="red" dx="3" dy="1" result="redShift"/>
+      <feColorMatrix in="sharp" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0" result="gb"/>
+      <feBlend in="redShift" in2="gb" mode="screen" result="split"/>
+      <!-- grain -->
+      <feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="7" result="noise"/>
+      <feColorMatrix in="noise" type="saturate" values="0" result="mono"/>
+      <feComposite in="split" in2="mono" operator="arithmetic" k1="0" k2="1" k3=".22" k4="-.11"/>
+    </filter>
+  </svg>
+
+  <script>
+    // Fake JPEG compression: random-brightness 8x8 macroblocks, a few with
+    // blocky DCT-style stripes (mosquito noise), drawn once and tiled.
+    (function () {
+      var c = document.createElement('canvas');
+      c.width = c.height = 256;
+      var g = c.getContext('2d');
+      if (!g) return;
+      for (var y = 0; y < 256; y += 8) {
+        for (var x = 0; x < 256; x += 8) {
+          var v = Math.floor(Math.random() * 255);
+          g.fillStyle = 'rgba(' + v + ',' + v + ',' + v + ',' + (0.08 + Math.random() * 0.22) + ')';
+          g.fillRect(x, y, 8, 8);
+          if (Math.random() < 0.18) {
+            g.fillStyle = 'rgba(' + (Math.random() < .5 ? '0,0,0' : '255,255,255') + ',.35)';
+            var horiz = Math.random() < .5;
+            for (var i = 0; i < 8; i += 2) {
+              if (horiz) g.fillRect(x, y + i, 8, 1); else g.fillRect(x + i, y, 1, 8);
+            }
+          }
+        }
+      }
+      document.documentElement.style.setProperty('--macroblocks', 'url(' + c.toDataURL('image/png') + ')');
+    })();
+  </script>
 
   <script>
     (function () {
