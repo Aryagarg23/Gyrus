@@ -48,7 +48,14 @@
     }
   }
 
+  // Served from a website (the copy on aryagarg23.com), there is no local
+  // backend to find, and asking for 127.0.0.1 makes browsers prompt visitors
+  // for local-network access. Only the Electron app (file://) and a local dev
+  // server look for it.
+  const LOCAL_PAGE = location.protocol === 'file:' || ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+
   async function backendReachable() {
+    if (!LOCAL_PAGE) return false;
     if (Date.now() - probe.at < PROBE_CACHE_MS) return probe.ok;
     if (probe.pending) return probe.pending;
     probe.pending = (async () => {
