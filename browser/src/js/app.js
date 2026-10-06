@@ -251,7 +251,7 @@ class App {
     tab.visited = true;
 
     if (this.el.webview) this.el.webview.src = tab.url;
-    if (this.el.urlBar) this.el.urlBar.value = tab.url;
+    if (this.el.urlBar) this.el.urlBar.value = this.displayAddress(tab.url);
     this.renderPageBar();
     this.setView('page');
 
@@ -1020,7 +1020,7 @@ class App {
         showLobotomy(e.url);
         return;
       }
-      if (urlBar) urlBar.value = e.url;
+      if (urlBar) urlBar.value = this.displayAddress(e.url);
       if (this.activeTab && e.url !== 'about:blank') this.activeTab.url = e.url;
       this.updateOpenLink();
     });
@@ -1031,7 +1031,7 @@ class App {
         this.backToList();
         return;
       }
-      if (urlBar) urlBar.value = e.url;
+      if (urlBar) urlBar.value = this.displayAddress(e.url);
       if (this.activeTab) this.activeTab.url = e.url;
     });
 
@@ -1046,7 +1046,7 @@ class App {
     // dot) is a normal search. In demo mode that search is a stand-in page.
     urlBar?.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        urlBar.value = this.activeTab?.url || '';
+        urlBar.value = this.displayAddress(this.activeTab?.url || '');
         urlBar.blur();
         return;
       }
@@ -1197,6 +1197,18 @@ class App {
     const host = url.hostname.replace(/^www\./, '');
     if (host === 'bing.com' && url.pathname.startsWith('/chat')) return true;
     return LLM_CHAT_DOMAINS.some((domain) => host === domain || host.endsWith(`.${domain}`));
+  }
+
+  // Demo stand-in pages live at a long local demo-page.html?... address.
+  // Show where the source would have come from instead.
+  displayAddress(url) {
+    try {
+      const u = new URL(url, window.location.href);
+      if (/demo-page\.html$/.test(u.pathname)) {
+        return `${u.searchParams.get('source') || 'Search'} (example page)`;
+      }
+    } catch (_) { /* not a URL: show as is */ }
+    return url;
   }
 
   // lobotomy.html sits next to index.html, so it is same-origin and loads in
