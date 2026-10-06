@@ -1,0 +1,121 @@
+/* -------------------------------------------------------------------------- */
+/*   06-components/_task.css: the task view (app.js renderTaskView).          */
+/*   Title, intent, what the crew did, and the reading list of source cards. */
+/* -------------------------------------------------------------------------- */
+
+.task {
+  width: min(var(--width-measure), 100%);
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4) var(--space-7);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.task__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.task__head > .label {
+  margin: 0;
+}
+
+.task__title {
+  margin: 0;
+  font-size: var(--font-size-display);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  overflow-wrap: anywhere;
+}
+
+.task__title:focus {
+  outline: none; /* focused for screen readers on open; not a control */
+}
+
+.task__intro,
+.task__empty,
+.task__demo {
+  margin: 0;
+}
+
+.task__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.task__list > .label {
+  margin: 0;
+}
+
+/* Reading list: one card per source. */
+.sources {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.source {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-1);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: none;
+  color: var(--color-ink);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--duration-hover) var(--ease-hover);
+}
+
+.source:hover {
+  background-color: var(--color-accent-wash);
+}
+
+.source:focus-visible {
+  outline-offset: 2px;
+}
+
+.source__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.source__name {
+  font-size: var(--font-size-caption);
+}
+
+.source__read {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-caption);
+  color: var(--color-accent);
+}
+
+.source__read .icon {
+  width: var(--space-3);
+  height: var(--space-3);
+}
+
+.source__title {
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+}
+
+.source__why {
+  font-size: var(--font-size-sm);
+  color: var(--color-ink-muted);
+}
+
+/* Read sources step back a little; unread ones stay full strength. */
+.source.is-visited .source__title {
+  font-weight: var(--font-weight-regular);
+  color: var(--color-ink-muted);
+}

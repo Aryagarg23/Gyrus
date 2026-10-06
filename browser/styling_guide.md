@@ -1,166 +1,49 @@
-# Pastel Neumorphic UI Framework for LLM Generation
-Objective: This document provides the technical framework and stylistic guidelines for a Large Language Model (LLM) to generate code for Pastel Neumorphic user interfaces. Adherence to these rules is mandatory for ensuring visual consistency, maintainability, and accessibility.
+# Styling guide
 
-## 1.0 Core Directives
-The generated UI must adhere to the following core principles:
+Gyrus follows the look of Memento, the team's earlier app: iOS-native and warm, light and dark. This file says what the rules are and where they live. If the CSS and this file disagree, the CSS wins; fix this file.
 
-**1.1 Tactile Realism:** All UI components must be rendered to feel tangible. Elements are defined exclusively by light and shadow, not borders or harsh color contrasts.
+## Tokens (`src/styles/01-settings/`)
 
-**1.2 Visual Cohesion:** The entire interface must be rendered as a single, continuous surface. All components are part of the background material, either extruded (pushed out) or inset (pressed in). Do not generate code for layered or "floating" elements.
+**Colour, shape, shadow** (`_colors.css`). Light by default, dark under `prefers-color-scheme: dark`; `:root[data-theme="light"|"dark"]` forces either.
 
-**1.3 Subtle Definition:** Neumorphism is achieved through subtlety. Shadows and highlights must be soft and diffuse to create a gentle sense of depth.
+| Token | Light | Dark | Use |
+| --- | --- | --- | --- |
+| `--color-ground` | `#F2F2F7` | `#000000` | page background |
+| `--color-elevated` | `#F2F2F7` | `#1C1C1E` | rail and top bar |
+| `--color-surface` | `#FFFFFF` | `#2C2C2E` | cards and panels |
+| `--color-ink` | `#1C1C1E` | `#F2F2F7` | primary text |
+| `--color-ink-muted` | `#6E6E73` | `#98989D` | secondary text |
+| `--color-hairline` | `#E5E5EA` | `#38383A` | separators |
+| `--color-accent` | `#F09A37` | `#FFA94D` | the one accent |
 
-**1.4 Pastel Minimalism:** A pastel monochromatic color scheme is mandatory. Information and hierarchy are conveyed through shape, size, and depth, not a wide palette.
+Also `--color-accent-pressed`, `--color-accent-wash` (selected rows), `--color-fill` (inputs, hover), `--color-ink-faint` (placeholders). The accent is used for primary buttons, the selected task, finished crew steps, intent labels on the example searches, links, focus rings and actionable icons. Nothing else is coloured.
 
-## 2.0 CSS Architecture Specification
-The LLM must structure the generated CSS according to the following hybrid model:
+Radii: cards 16px, buttons 12px, inputs 14px, search box pill, hero tile 24px. One shadow, `--shadow-card`, for floating surfaces only (search box, chooser, modal, suggestions).
 
-**2.1 ITCSS (Inverted Triangle CSS):** Organize all generated style files according to the ITCSS layers. This ensures predictability and scalability.
+**Type** (`_typography.css`). System UI stack (`-apple-system`, SF Pro Text, Inter, system-ui), weights 400 / 600 / 700. Five sizes: caption 12px, small 13px, body 15px, headline 17px, large title 28px. Sentence case everywhere. Section headers (`.label`) are 13px / 600 / secondary.
 
-**2.2 BEM (Block, Element, Modifier):** Use BEM for all CSS class naming to create a clear, readable relationship between the generated HTML and its styles.
+**Spacing** (`_spacing.css`). `--space-1` to `--space-7` = 4, 8, 12, 16, 24, 32, 48px. Component sizes are named tokens there too (rail 232px, 64px when collapsed; top bar 48px).
 
-### Required File Structure
-```
-/src
-|-- /styles
-|   |-- 01-settings
-|   |   |-- _colors.css
-|   |   |-- _typography.css
-|   |   |-- _spacing.css
-|   |   |-- _shadows.css
-|   |-- 02-tools
-|   |   |-- _mixins.css
-|   |-- 03-generic
-|   |   |-- _reset.css
-|   |-- 04-elements
-|   |   |-- _base.css
-|   |-- 05-objects
-|   |   |-- _layout.css
-|   |-- 06-components
-|   |   |-- _button.css
-|   |-- 07-utilities
-|   |   |-- _helpers.css
-```
+**Motion** (`_transitions.css`). Hovers 200ms ease-out; panels 280ms on an ease-out curve. Both drop to 0 under `prefers-reduced-motion`, and `_base.css` stops all animation there. No bounce, no scaling. The run screen's timing lives in `app.js RUN_TIMING`; under reduced motion it skips the ticking.
 
-## 3.0 Naming Convention Rules
-Strictly adhere to the BEM (Block, Element, Modifier) naming convention.
+## Shared components (`06-components/_controls.css`)
 
-- **Block:** A standalone entity (e.g., `.form-card`, `.user-profile`).
-- **Element:** A part of a block, delimited by two underscores (e.g., `.form-card__input`, `.user-profile__avatar`).
-- **Modifier:** A variation of a block or element, delimited by two hyphens (e.g., `.button--pressed`, `.form-card--flat`).
+- `.button`: primary, accent fill, 12px radius, white 600 label. `.button--text`: accent text, no fill. `.icon-button`: accent line icon, soft fill on hover; `--quiet` for secondary icons (row close buttons).
+- `.icon`: inline SVG, 16px, 2px stroke, round caps and joins, `currentColor`.
+- `.card`: in-flow white card holding rows. `.panel`: card plus shadow, for floating surfaces.
+- `.row`: every list item (tasks, suggestions, chooser options). 44px min height, inset 1px separators that start after the icon, fill on hover. Selected: accent wash plus an accent bar on the leading edge.
+- `.intent`, `.crew`, `.steps` (`_run.css`): the intent guess and the crew's steps, shared by the run screen and the task view. A step is a hairline ring while pending, an accent ring while running, an accent disc with a check when done.
+- `.source` (`_task.css`): a reading-list card. Source name as a label, title at 17px semibold, one muted line on why. Read cards drop to a regular-weight muted title.
+- `.hero-mark`: the iridescent tile with a white line-art brain. Start screen and About panel only.
+- Focus: 2px accent outline, 2px offset (inset on rows, which sit in clipped cards).
 
-## 4.0 Design Token Specification
-All visual styles must be derived from these CSS Custom Properties (Design Tokens).
+## Exceptions
 
-### 4.1 Color Tokens
-The color palette is derived from a single pastel base color to maintain the single-material aesthetic.
-```css
-:root {
-  /* Base Pastel Material (Soft Lavender) */
-  --color-base: #f2f2f8;
+- macOS traffic-light window buttons keep their native colours and round shape.
+- The hero tile uses its own gradient and a white highlight.
+- `lobotomy.html` is deliberately off-system and is not styled from here.
+- `demo-page.html` (the demo's stand-in page) loads the shared tokens and base, and keeps its few reader styles inline.
 
-  /* Shadow & Highlight Colors (derived from base) */
-  --color-light-shadow: #ffffff;
-  --color-dark-shadow: #d0d0d8;
+## Architecture
 
-  /* Text Colors */
-  --color-text-primary: #5b5b6e;
-  --color-text-secondary: #9a9aaf;
-  
-  /* Accent Color (for interactive states or highlights) */
-  --color-accent: #8e82ff;
-}
-```
-
-### 4.2 Shadow Tokens
-The dual-shadow system is the cornerstone of Neumorphism. Generate shadows using these variables exclusively.
-```css
-:root {
-  --shadow-distance: 5px;
-  --shadow-blur: 15px;
-
-  /* Default, extruded shadow */
-  --shadow-neumorphic: 
-    var(--shadow-distance) var(--shadow-distance) var(--shadow-blur) var(--color-dark-shadow),
-    calc(var(--shadow-distance) * -1) calc(var(--shadow-distance) * -1) var(--shadow-blur) var(--color-light-shadow);
-
-  /* Inset shadow for pressed state */
-  --shadow-neumorphic-inset: 
-    inset var(--shadow-distance) var(--shadow-distance) var(--shadow-blur) var(--color-dark-shadow),
-    inset calc(var(--shadow-distance) * -1) calc(var(--shadow-distance) * -1) var(--shadow-blur) var(--color-light-shadow);
-}
-```
-
-### 4.3 Typography & Spacing Tokens
-Use these tokens for all text and layout spacing to ensure consistency.
-```css
-:root {
-  --font-family-primary: 'Inter', 'Segoe UI', sans-serif;
-  --font-size-base: 1rem;   /* 16px */
-  --font-weight-regular: 400;
-  --font-weight-bold: 600;
-  --space-4: 1rem;     /* 16px */
-  --space-5: 1.25rem;  /* 20px */
-}
-```
-
-## 5.0 Component Generation Example: Button
-This Button component is the canonical example for generating Neumorphic components using HTML and BEM.
-
-**HTML:**
-```html
-<button class="button">
-  <span class="button__text">Generate</span>
-</button>
-```
-
-**CSS (`_button.css`):**
-```css
-.button {
-  background-color: var(--color-base);
-  color: var(--color-text-secondary);
-  border: none;
-  border-radius: 20px;
-  padding: var(--space-4) var(--space-5);
-  font-family: var(--font-family-primary);
-  font-weight: var(--font-weight-bold);
-  cursor: pointer;
-  
-  /* Apply the default extruded shadow */
-  box-shadow: var(--shadow-neumorphic);
-  
-  /* Smooth transition for the press effect */
-  transition: box-shadow 0.15s ease-in-out, color 0.15s ease-in-out;
-}
-
-.button:hover {
-  color: var(--color-accent);
-}
-
-.button:active {
-  /* On press, switch to the inset shadow */
-  box-shadow: var(--shadow-neumorphic-inset);
-  color: var(--color-accent);
-}
-
-.button:focus-visible {
-  outline: none;
-  /* Add a subtle ring for accessibility */
-  box-shadow: 0 0 0 2px var(--color-base), 0 0 0 4px var(--color-accent);
-}
-
-.button__text {
-  /* BEM element for the text if needed for specific styling */
-}
-```
-
-## 6.0 Implementation Mandates & Constraints
-**6.1 Accessibility is Non-Negotiable:** The low-contrast nature of this style requires strict adherence to accessibility rules.
-
-- **Mandate:** All generated text and icon colors must be tested to ensure a WCAG AA contrast ratio of at least 4.5:1 against the base color.
-- **Mandate:** Use icons in combination with text labels to improve affordance.
-- **Mandate:** All interactive elements must have a clear, visible `:focus-visible` state that does not rely solely on Neumorphic shadows. The example in section 5.0 is the required implementation.
-
-**6.2 Use Sparingly:** Not every element must be extruded. Generate code using flat or inset styles for secondary elements to create visual hierarchy.
-
-**6.3 Animate with Care:** All transitions must be quick and subtle (e.g., 0.15s ease-in-out) to mimic an immediate physical response.
+ITCSS folders under `src/styles/` (settings, elements, objects, components, platforms) and BEM class names. Component files only add what the shared classes don't cover.

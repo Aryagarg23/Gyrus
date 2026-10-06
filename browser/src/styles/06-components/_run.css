@@ -1,0 +1,197 @@
+/* -------------------------------------------------------------------------- */
+/*   06-components/_run.css: a search happening (app.js renderRun*).          */
+/*   The intent guess with "Not right?", the crew's steps ticking through,    */
+/*   and the "Not right?" chooser. Also used by the task view (.intent,       */
+/*   .crew, .steps).                                                          */
+/* -------------------------------------------------------------------------- */
+
+.run {
+  width: min(var(--width-measure), 100%);
+  min-height: 100%;
+  margin: 0 auto;
+  padding: var(--space-7) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-3);
+}
+
+.run > .label {
+  margin: 0;
+}
+
+.run__query {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-display);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  overflow-wrap: anywhere;
+}
+
+.run__guess {
+  padding: var(--space-4) var(--space-5);
+}
+
+.run__thinking {
+  margin: 0;
+  color: var(--color-ink-muted);
+}
+
+/* Three dots after "Working out what you're trying to do", stepping in turn.
+   Gone under reduced motion (the global rule stops animations). */
+.run__thinking::after {
+  content: "...";
+  display: inline-block;
+  width: 1.5em;
+  overflow: hidden;
+  vertical-align: bottom;
+  animation: run-dots 1.2s steps(4, jump-none) infinite;
+}
+
+@keyframes run-dots {
+  from { width: 0; }
+  to { width: 1.5em; }
+}
+
+.run__slow {
+  margin: var(--space-1) 0 0;
+}
+
+.run__note {
+  margin: 0;
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-card);
+  background-color: var(--color-surface);
+}
+
+.run__skip {
+  align-self: flex-start;
+  margin-top: var(--space-2);
+}
+
+/* The intent guess. */
+.intent {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  column-gap: var(--space-3);
+}
+
+.intent__guess {
+  margin: 0;
+  font-size: var(--font-size-title);
+}
+
+.intent__lead {
+  color: var(--color-ink-muted);
+}
+
+.intent__name {
+  font-weight: var(--font-weight-bold);
+  color: var(--color-ink);
+}
+
+.intent__meaning {
+  grid-column: 1;
+  margin: 0;
+}
+
+.intent__fix {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
+/* The crew and its steps. */
+.crew {
+  padding: var(--space-4) var(--space-5);
+}
+
+.crew__title {
+  margin: 0 0 var(--space-3);
+}
+
+.steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.step {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  color: var(--color-ink-muted);
+  transition: color var(--duration-hover) var(--ease-hover);
+}
+
+.step__mark {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--icon-size) + var(--space-2));
+  height: calc(var(--icon-size) + var(--space-2));
+  margin-top: 1px;
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--color-hairline);
+  color: transparent;
+  transition: background-color var(--duration-hover) var(--ease-hover),
+    border-color var(--duration-hover) var(--ease-hover);
+}
+
+.step__mark .icon {
+  width: calc(var(--icon-size) - 4px);
+  height: calc(var(--icon-size) - 4px);
+  stroke-width: 2.5;
+}
+
+.step.is-active {
+  color: var(--color-ink);
+}
+
+.step.is-active .step__mark {
+  border-color: var(--color-accent);
+}
+
+.step.is-done {
+  color: var(--color-ink);
+}
+
+.step.is-done .step__mark {
+  border-color: var(--color-accent);
+  background-color: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.step__text {
+  overflow-wrap: anywhere;
+}
+
+/* "Not right?" chooser: a floating panel of intent rows. */
+.chooser {
+  position: fixed;
+  z-index: 3000;
+  width: var(--width-menu);
+  max-width: calc(100vw - var(--space-4));
+  display: flex;
+  flex-direction: column;
+}
+
+.chooser__head {
+  margin: 0;
+  padding: var(--space-3) var(--space-4) var(--space-1);
+}
+
+.chooser .row.is-active {
+  cursor: default;
+}
+
+.chooser__note {
+  margin: 0;
+  padding: var(--space-2) var(--space-4) var(--space-3);
+  border-top: var(--border-hairline);
+  font-size: var(--font-size-caption);
+}

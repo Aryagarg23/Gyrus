@@ -1,158 +1,90 @@
-/* Webview Component */
+/* -------------------------------------------------------------------------- */
+/*   06-components/_webview.css: the page view (components/webview.html).    */
+/*   A bar with the way back ("Back to sources" / "Back to General"), what    */
+/*   the page is and how it got here, then the <webview> (Electron) or the    */
+/*   <iframe> (plain browser, js/platform.js).                                */
+/* -------------------------------------------------------------------------- */
+
+.page {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.page__bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--header-element-height);
+  padding: var(--space-1) var(--space-3);
+  border-bottom: var(--border-hairline);
+  background-color: var(--color-surface);
+}
+
+.page__back {
+  flex: 0 0 auto;
+  gap: var(--space-1);
+  padding-left: var(--space-1);
+}
+
+.page__about {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: var(--line-height-tight);
+}
+
+.page__title {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: var(--font-weight-semibold);
+}
+
+.page__origin {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--font-size-caption);
+}
+
+.page__actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.page__actions [hidden] {
+  display: none;
+}
+
+.page__frame {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 .browser-webview {
+  position: absolute;
+  inset: 0;
   width: 100%;
+  /* explicit: an <iframe> is a replaced element, so inset alone leaves it at
+     its intrinsic 150px height */
   height: 100%;
   border: none;
-  outline: none;
-  background-color: var(--color-base);
-  border-radius: 0; /* Remove border radius to fill completely */
-  box-shadow: none; /* Remove shadow since it fills the entire area */
-  transition: box-shadow var(--transition-duration-normal) var(--transition-easing);
-  position: absolute; /* Position absolutely to fill container */
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1;
-  pointer-events: auto;
-  
-  /* Hide scrollbars in webview */
-  scrollbar-width: none !important; /* Firefox */
-  -ms-overflow-style: none !important; /* Internet Explorer 10+ */
+  background-color: var(--color-ground);
 }
 
-/* Hide webview scrollbars for webkit browsers */
-.browser-webview::-webkit-scrollbar {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-  background: transparent !important;
+@media (max-width: 560px) {
+  .page__back-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
 }
-
-.browser-webview::-webkit-scrollbar-track {
-  display: none !important;
-}
-
-.browser-webview::-webkit-scrollbar-thumb {
-  display: none !important;
-}
-
-.browser-webview::-webkit-scrollbar-corner {
-  display: none !important;
-}
-
-/* When webview is active, ensure the webview element fills completely */
-.content-area.has-active-webview #webview-container .browser-webview {
-  width: 100% !important;
-  height: 100% !important;
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-}
-
-.browser-webview:hover {
-  /* Remove hover effect since webview fills the entire area */
-}
-
-/* Webview container to handle layout integration */
-.webview-container {
-  width: 100%;
-  height: 100%;
-  position: absolute; /* Position absolutely to fill the content area */
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  flex-direction: column;
-  background-color: var(--color-base);
-  border-radius: 0; /* Remove border radius to fill completely */
-  overflow: hidden;
-  z-index: 1;
-  min-height: 100%; /* Ensure minimum height */
-  
-  /* Hide scrollbars in webview container */
-  scrollbar-width: none !important; /* Firefox */
-  -ms-overflow-style: none !important; /* Internet Explorer 10+ */
-}
-
-/* Hide webview container scrollbars for webkit browsers */
-.webview-container::-webkit-scrollbar {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-  background: transparent !important;
-}
-
-.webview-container::-webkit-scrollbar-track {
-  display: none !important;
-}
-
-.webview-container::-webkit-scrollbar-thumb {
-  display: none !important;
-}
-
-.webview-container::-webkit-scrollbar-corner {
-  display: none !important;
-}
-
-/* When webview is active, completely override positioning */
-.content-area.has-active-webview #webview-container .webview-container {
-  position: fixed !important;
-  top: 48px !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  width: 100vw !important;
-  height: calc(100vh - 48px) !important;
-  z-index: 999 !important;
-  background-color: red !important; /* Debug: temporary red background to see boundaries */
-}
-
-/* Adjust for sidebar when visible */
-.sidebar.is-visible ~ .content-area.has-active-webview #webview-container .webview-container {
-  left: 200px !important;
-  width: calc(100vw - 200px) !important;
-}
-
-/* Loading indicator */
-.webview-loading {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-4);
-  color: var(--color-text-secondary);
-  z-index: 2;
-  pointer-events: none; /* Don't interfere with webview interaction */
-}
-
-.webview-loading__spinner {
-  width: 32px;
-  height: 32px;
-  border: 3px solid var(--color-light-shadow);
-  border-top: 3px solid var(--color-accent);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.webview-loading__text {
-  font-family: var(--font-family-primary);
-  font-size: var(--font-size-base);
-  color: var(--color-text-secondary);
-}
-
-/* Hide loading when webview is ready */
-.browser-webview[data-ready="true"] + .webview-loading {
-  display: none;
-} 

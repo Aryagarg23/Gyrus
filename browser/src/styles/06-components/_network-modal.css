@@ -1,361 +1,188 @@
-
-
-.network-action__button {
-  background: #23234a !important;
-  color: #fff !important;
-  border: 1px solid var(--color-accent) !important;
-  font-weight: 600;
-  box-shadow: 0 2px 8px rgba(142,130,255,0.08);
-}
-
-.network-action__button:hover {
-  background: var(--color-accent) !important;
-  color: #23234a !important;
-  border-color: var(--color-accent) !important;
-}
+/* -------------------------------------------------------------------------- */
+/*                     06-components/_network-modal.css                       */
+/*   Memory: "What Gyrus remembers", the d3 graph drawn in app.js. Opened    */
+/*   from the rail.                                                           */
+/*   Node type is shown by shape and weight in text colours; the accent       */
+/*   marks only the node the user selected.                                   */
+/* -------------------------------------------------------------------------- */
 
 .network-modal {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1000;
+  inset: 0;
+  z-index: 2500;
   display: none;
-  opacity: 0;
-  
-  /* Smooth modal transitions */
-  transition: opacity var(--transition-duration-normal) var(--transition-easing-smooth);
-  
-  /* Hardware acceleration */
-  transform: translateZ(0);
-  will-change: opacity;
 }
 
 .network-modal.is-visible {
   display: flex;
-  opacity: 1;
 }
 
 .network-modal__overlay {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-  
-  /* Smooth overlay transitions */
-  transition: 
-    background-color var(--transition-duration-normal) var(--transition-easing-smooth),
-    backdrop-filter var(--transition-duration-normal) var(--transition-easing-smooth);
-  
-  /* Hardware acceleration */
-  transform: translateZ(0);
-  will-change: background-color, backdrop-filter;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.25);
 }
 
 .network-modal__content {
   position: relative;
-  width: 95%;
-  max-width: 800px;
-  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  width: calc(100% - var(--space-6));
+  max-width: var(--width-wide);
+  height: calc(100% - var(--space-7) * 2);
   margin: auto;
-  background: rgba(255, 255, 255, 0.98);
-  backdrop-filter: blur(10px);
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-  transform: scale(0.9);
-  
-  /* Smooth content transitions */
-  transition: 
-    transform var(--transition-duration-normal) var(--transition-easing-bounce),
-    box-shadow var(--transition-duration-normal) var(--transition-easing-smooth);
-  
-  /* Hardware acceleration */
-  transform: translateZ(0);
-  will-change: transform, box-shadow;
-}
-
-.network-modal.is-visible .network-modal__content {
-  transform: scale(1) translateZ(0);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
 }
 
 .network-modal__header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  padding: 20px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+}
+
+.network-modal__heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
 }
 
 .network-modal__title {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
   margin: 0;
+  font-size: var(--font-size-display);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
 }
 
-.network-modal__close {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  background: transparent;
-  border-radius: 50%;
-  cursor: pointer;
-  color: var(--color-text-secondary);
-  
-  /* Smooth close button transitions */
-  transition: 
-    transform var(--transition-duration-fast) var(--transition-easing-bounce),
-    background-color var(--transition-duration-fast) var(--transition-easing),
-    color var(--transition-duration-fast) var(--transition-easing);
-  
-  /* Hardware acceleration */
-  transform: translateZ(0);
-  will-change: transform, background-color, color;
-}
-
-.network-modal__close:hover {
-  background-color: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-  transform: scale(1.1) translateZ(0);
-}
-
-.network-modal__close:active {
-  transform: scale(0.95) translateZ(0);
-  transition-duration: 0.1s; /* Faster response on active */
-}
-
-.network-modal__close::before {
-  content: "×";
-  font-size: 18px;
-  font-weight: bold;
-  line-height: 1;
+.network-modal__subtitle {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-ink-muted);
 }
 
 .network-modal__body {
-  padding: 16px;
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+}
+
+.network-graph {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  margin: 0 var(--space-5);
+  border-radius: var(--radius-button);
+  background-color: var(--color-ground);
+  overflow: hidden;
+}
+
+.network-graph__container {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.network-graph__container svg {
+  display: block;
+  cursor: grab;
+}
+
+.network-graph__empty {
   height: 100%;
-}
-
-.network-info {
-  margin-bottom: 16px;
-  padding: 12px 16px;
-  background: rgba(255, 255, 255, 0.6);
-  border-radius: 6px;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  
-  /* Smooth info transitions */
-  transition: 
-    background-color var(--transition-duration-fast) var(--transition-easing),
-    border-color var(--transition-duration-fast) var(--transition-easing);
-  
-  /* Hardware acceleration */
-  transform: translateZ(0);
-  will-change: background-color, border-color;
-}
-
-.network-info__item {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-  
-  /* Smooth item transitions */
-  transition: 
-    border-color var(--transition-duration-fast) var(--transition-easing);
-  
-  will-change: border-color;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--color-ink-muted);
 }
 
-.network-info__item:last-child {
-  border-bottom: none;
-}
-
-.network-info__label {
-  font-weight: 500;
-  color: var(--color-text-secondary);
-  
-  /* Smooth label transitions */
-  transition: 
-    color var(--transition-duration-fast) var(--transition-easing);
-  
-  will-change: color;
-}
-
-.network-info__value {
-  font-weight: 600;
-  color: var(--color-text-primary);
-  
-  /* Smooth value transitions */
-  transition: 
-    color var(--transition-duration-fast) var(--transition-easing);
-  
-  will-change: color;
+.network-graph__empty strong {
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-ink);
 }
 
 .network-actions {
   display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-.network-action__button {
-  display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  background: rgba(255, 255, 255, 0.8);
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--color-text-primary);
-  
-  /* Smooth button transitions */
-  transition: 
-    transform var(--transition-duration-fast) var(--transition-easing-bounce),
-    background-color var(--transition-duration-fast) var(--transition-easing),
-    border-color var(--transition-duration-fast) var(--transition-easing),
-    color var(--transition-duration-fast) var(--transition-easing);
-  
-  /* Hardware acceleration */
-  transform: translateZ(0);
-  will-change: transform, background-color, border-color, color;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-5) var(--space-4);
 }
 
-.network-action__button:hover {
-  background: rgba(255, 255, 255, 1);
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-  transform: translateY(-1px) translateZ(0);
-}
-
-.network-action__button:active {
-  transform: translateY(0) scale(0.98) translateZ(0);
-  transition-duration: 0.1s; /* Faster response on active */
-}
-
-.network-action__button svg {
-  width: 16px;
-  height: 16px;
-  
-  /* Smooth icon transitions */
-  transition: 
-    transform var(--transition-duration-fast) var(--transition-easing);
-  
-  /* Hardware acceleration */
-  transform: translateZ(0);
-  will-change: transform;
-}
-
-.network-action__button:hover svg {
-  transform: scale(1.1) translateZ(0);
-}
-
-.network-graph {
-  flex: 1;
+/* One-line legend under the title: searches, topics, links. */
+.network-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
   margin: 0;
-  padding: 0;
-  background: transparent;
-  border-radius: 0;
-  border: none;
+  font-size: var(--font-size-sm);
+  color: var(--color-ink-muted);
 }
 
-.network-graph__container {
-  width: 100%;
-  height: 100%;
-  min-height: 400px;
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 6px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  overflow: hidden;
-  
-  /* Smooth container transitions */
-  transition: 
-    background-color var(--transition-duration-fast) var(--transition-easing),
-    border-color var(--transition-duration-fast) var(--transition-easing);
-  
-  /* Hardware acceleration */
-  transform: translateZ(0);
-  will-change: background-color, border-color;
+.network-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
 }
 
-.network-graph__container svg {
-  width: 100%;
-  height: 100%;
+.network-legend__item svg {
+  width: var(--space-3);
+  height: var(--space-3);
 }
 
-.network-graph__container .node {
-  cursor: pointer;
-  
-  /* Smooth node transitions */
-  transition: 
-    stroke-width var(--transition-duration-fast) var(--transition-easing),
-    filter var(--transition-duration-fast) var(--transition-easing);
-  
-  /* Hardware acceleration */
-  transform: translateZ(0);
-  will-change: stroke-width, filter;
+/* Graph marks (d3 SVG and legend). */
+.graph-link {
+  stroke: var(--color-hairline);
+  stroke-width: 1;
 }
 
-.network-graph__container .node:hover {
-  stroke-width: 3px;
-  filter: brightness(1.1);
-}
-
-.network-graph__container .node.selected {
-  stroke-width: 4px;
-  filter: brightness(1.1) drop-shadow(0 0 8px rgba(16, 185, 129, 0.6));
-}
-
-.network-graph__container .link {
-  stroke: rgba(0, 0, 0, 0.2);
-  stroke-width: 1.5px;
-  
-  /* Smooth link transitions */
-  transition: 
-    stroke-width var(--transition-duration-fast) var(--transition-easing),
-    stroke var(--transition-duration-fast) var(--transition-easing),
-    opacity var(--transition-duration-fast) var(--transition-easing);
-  
-  /* Hardware acceleration */
-  transform: translateZ(0);
-  will-change: stroke-width, stroke, opacity;
-}
-
-.network-graph__container .link:hover {
-  stroke-width: 2.5px;
+.graph-link.is-highlighted {
   stroke: var(--color-accent);
-  opacity: 0.8;
 }
 
-.network-graph__container .node-label {
-  font-size: 11px;
-  font-weight: 600;
-  text-anchor: middle;
+.graph-node--concept {
+  fill: var(--color-ink);
+  stroke: none;
+}
+
+.graph-node--query {
+  fill: var(--color-ground);
+  stroke: var(--color-ink);
+  stroke-width: 2;
+}
+
+.graph-node--link {
+  fill: var(--color-ink-muted);
+  stroke: none;
+}
+
+.network-graph__container .graph-node {
+  cursor: pointer;
+}
+
+.graph-node.is-selected {
+  fill: var(--color-accent);
+  stroke: var(--color-accent);
+}
+
+.graph-label {
+  fill: var(--color-ink-muted);
+  font-size: var(--font-size-caption);
   pointer-events: none;
-  fill: var(--color-text-primary);
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
-  
-  /* Smooth label transitions */
-  transition: 
-    fill var(--transition-duration-fast) var(--transition-easing);
-  
-  will-change: fill;
-} 
+}
+
+.graph-label--concept {
+  fill: var(--color-ink);
+  font-weight: var(--font-weight-semibold);
+}
+
+.graph-label.is-selected {
+  fill: var(--color-accent);
+}

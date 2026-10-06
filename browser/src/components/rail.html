@@ -1,0 +1,25 @@
+<nav class="rail" aria-label="Gyrus">
+  <!-- macOS window buttons land here in Electron (components.js) -->
+  <div class="rail__head"></div>
+
+  <button class="rail__new row" type="button" title="New search (Ctrl+T)">
+    <span class="rail__icon"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg></span>
+    <span class="rail__text">New search</span>
+  </button>
+
+  <h2 class="rail__label label">Tasks</h2>
+  <div class="rail__tasks card" role="list" aria-label="Tasks"></div>
+
+  <div class="rail__foot">
+    <button class="rail__memory row" type="button" title="Memory: what Gyrus remembers">
+      <span class="rail__icon">
+        <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 5l3 3m0 0l3-2.5M8 8v4"/><rect x="2" y="2" width="3" height="3"/><circle cx="12.5" cy="4.5" r="1.5"/><circle cx="8" cy="13.5" r="1.5"/></svg>
+      </span>
+      <span class="rail__text">Memory</span>
+    </button>
+    <button class="rail__about" type="button" title="About Gyrus">
+      <span class="rail__icon"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><path d="M8 7.5V11M8 5h.01"/></svg></span>
+      <span class="rail__text">About</span>
+    </button>
+  </div>
+</nav>

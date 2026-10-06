@@ -1,0 +1,163 @@
+/* -------------------------------------------------------------------------- */
+/*   06-components/_start.css: the start screen (components/start-screen.html) */
+/*   Hero tile, title, one-line lede, search box, three example searches,   */
+/*   "How it works" and, in demo mode, one quiet note.                        */
+/* -------------------------------------------------------------------------- */
+
+.start {
+  width: min(var(--width-measure), 100%);
+  min-height: 100%;
+  margin: 0 auto;
+  padding: var(--space-7) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  text-align: center;
+}
+
+.start__title {
+  margin: 0;
+  font-size: var(--font-size-display);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+}
+
+.start__lede {
+  margin: calc(-1 * var(--space-2)) 0 var(--space-2);
+  max-width: 30rem;
+  font-size: var(--font-size-title);
+  color: var(--color-ink-muted);
+}
+
+/* The search box: a white pill with the card shadow and a Search button. */
+.search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-5);
+  background-color: var(--color-surface);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-card);
+  transition: box-shadow var(--duration-hover) var(--ease-hover);
+}
+
+.search:focus-within {
+  box-shadow: var(--shadow-card), 0 0 0 2px var(--color-accent);
+}
+
+.search__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: var(--button-height);
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-ink);
+  font-size: var(--font-size-title);
+}
+
+.search__input:focus-visible {
+  outline: none; /* the box shows focus */
+}
+
+.search__input::placeholder {
+  color: var(--color-ink-faint);
+}
+
+.search__submit {
+  flex: 0 0 auto;
+  min-height: calc(var(--button-height) - var(--space-1));
+  border-radius: var(--radius-pill);
+}
+
+/* "@" suggestions under the box. */
+.suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  margin-top: var(--space-2);
+  max-height: var(--height-list-max);
+  overflow-y: auto;
+  text-align: left;
+}
+
+.suggestions[hidden] {
+  display: none;
+}
+
+/* Example searches: small cards, each labelled with its intent. */
+.start__examples {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.example {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: none;
+  border-radius: var(--radius-button);
+  background-color: var(--color-surface);
+  color: var(--color-ink);
+  font-size: var(--font-size-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--duration-hover) var(--ease-hover);
+}
+
+.example:hover {
+  background-color: var(--color-accent-wash);
+}
+
+.example__intent {
+  font-size: var(--font-size-caption);
+  color: var(--color-accent);
+}
+
+.example__text {
+  font-weight: var(--font-weight-semibold);
+}
+
+/* How it works: three numbered lines. */
+.start__how {
+  width: 100%;
+  margin-top: var(--space-3);
+  text-align: left;
+}
+
+.start__how .label {
+  margin: 0 0 var(--space-2);
+}
+
+.start__how ol {
+  margin: 0;
+  padding: 0 0 0 var(--space-5);
+  font-size: var(--font-size-sm);
+  color: var(--color-ink-muted);
+}
+
+.start__how li + li {
+  margin-top: var(--space-1);
+}
+
+.start__demo {
+  margin: var(--space-2) 0 0;
+  font-size: var(--font-size-caption);
+  color: var(--color-ink-muted);
+}
+
+@media (max-width: 560px) {
+  .start__examples {
+    grid-template-columns: 1fr;
+  }
+}

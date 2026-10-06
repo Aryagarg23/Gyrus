@@ -1,15 +1,68 @@
+/* Colour, radius and shadow tokens: iOS-native and warm (the Memento look).
+   Light by default, dark via prefers-color-scheme; :root[data-theme] forces
+   either. One accent, amber-orange: primary buttons, active and selected
+   states, line icons, links and focus rings. Nothing else is coloured. */
 :root {
-  /* Base Pastel Material (Soft Lavender) */
-  --color-base:rgb(32, 33, 36);
+  --color-ground: #f2f2f7;          /* grouped background */
+  --color-elevated: #f2f2f7;        /* rail and top bar */
+  --color-surface: #ffffff;         /* cards and panels */
+  --color-ink: #1c1c1e;             /* primary text */
+  --color-ink-muted: #6e6e73;       /* secondary text */
+  --color-hairline: #e5e5ea;        /* separators */
+  --color-fill: rgba(120, 120, 128, 0.12);   /* inputs, hover */
+  --color-accent: #f09a37;
+  --color-accent-pressed: #d9822b;
+  --color-on-accent: #ffffff;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.08);
+  color-scheme: light;
+}
 
-  /* Shadow & Highlight Colors (derived from base) */
-  --color-light-shadow:rgb(56, 51, 51);
-  --color-dark-shadow:rgb(65, 65, 68);
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-ground: #000000;
+    --color-elevated: #1c1c1e;
+    --color-surface: #2c2c2e;
+    --color-ink: #f2f2f7;
+    --color-ink-muted: #98989d;
+    --color-hairline: #38383a;
+    --color-fill: rgba(120, 120, 128, 0.24);
+    --color-accent: #ffa94d;
+    --color-accent-pressed: #f09a37;
+    --color-on-accent: #1c1c1e;
+    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.3);
+    color-scheme: dark;
+  }
+}
 
-  /* Text Colors */
-  --color-text-primary:rgb(255, 255, 255);
-  --color-text-secondary:rgb(255, 255, 255);
-  
-  /* Accent Color (for interactive states or highlights) */
-  --color-accent:rgb(187, 134, 252);
-} 
+:root[data-theme="dark"] {
+  --color-ground: #000000;
+  --color-elevated: #1c1c1e;
+  --color-surface: #2c2c2e;
+  --color-ink: #f2f2f7;
+  --color-ink-muted: #98989d;
+  --color-hairline: #38383a;
+  --color-fill: rgba(120, 120, 128, 0.24);
+  --color-accent: #ffa94d;
+  --color-accent-pressed: #f09a37;
+  --color-on-accent: #1c1c1e;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.3);
+  color-scheme: dark;
+}
+
+:root {
+  /* Derived. Declared on :root so they follow the theme overrides above. */
+  --color-ink-faint: color-mix(in srgb, var(--color-ink-muted) 70%, transparent);  /* placeholders */
+  --color-accent-wash: color-mix(in srgb, var(--color-accent) 16%, transparent);   /* selected rows */
+  --border-hairline: 1px solid var(--color-hairline);
+
+  /* Shapes. */
+  --radius-card: 16px;
+  --radius-button: 12px;
+  --radius-input: 14px;
+  --radius-pill: 999px;
+  --radius-hero: 24px;
+  --radius-small: 4px;
+
+  /* Hero mark (start page and About panel only). */
+  --hero-gradient: linear-gradient(135deg, #b9a7f5 0%, #f28b82 55%, #f6b26b 100%);
+}

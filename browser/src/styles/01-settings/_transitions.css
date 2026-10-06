@@ -1,25 +1,14 @@
-/* -------------------------------------------------------------------------- */
-/*                      01-settings/_transitions.css                      */
-/* -------------------------------------------------------------------------- */
- 
 :root {
-  /* Core transition durations */
-  --transition-duration-fast: 0.25s;
-  --transition-duration-normal: 0.5s;
-  --transition-duration-slow: 0.8s;
-  
-  /* Easing functions for different types of animations */
-  --transition-easing: cubic-bezier(0.4, 0, 0.2, 1); /* Material Design standard */
-  --transition-easing-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55); /* Spring-like bounce */
-  --transition-easing-smooth: cubic-bezier(0.25, 0.46, 0.45, 0.94); /* Smooth and natural */
-  --transition-easing-sharp: cubic-bezier(0.4, 0, 1, 1); /* Sharp and responsive */
-  
-  /* Performance optimizations */
-  --transition-property-transform: transform;
-  --transition-property-opacity: opacity;
-  --transition-property-all: all;
-  
-  /* Hardware acceleration hints */
-  --transform-gpu: translateZ(0);
-  --backface-visibility: backface-visibility: hidden;
-} 
+  /* Gentle iOS-like ease-out. Nothing bounces; nothing runs past 300ms. */
+  --duration-hover: 200ms;
+  --duration-panel: 280ms;
+  --ease-hover: ease-out;
+  --ease-panel: cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-hover: 0ms;
+    --duration-panel: 0ms;
+  }
+}

@@ -1,88 +1,263 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lobotomy Memes</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 20px;
-            background: #000;
-            color: #fff;
-            font-family: Arial, sans-serif;
-            text-align: center;
-        }
-        
-        h1 {
-            font-size: 3em;
-            margin-bottom: 30px;
-            color: #ff6b6b;
-        }
-        
-        .meme-container {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 20px;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        
-        .meme-item {
-            max-width: 300px;
-            border: 3px solid #ff6b6b;
-            border-radius: 10px;
-            overflow: hidden;
-            transition: transform 0.3s ease;
-        }
-        
-        .meme-item:hover {
-            transform: scale(1.05);
-        }
-        
-        .meme-item img {
-            width: 100%;
-            height: auto;
-            display: block;
-        }
-        
-        .message {
-            font-size: 1.5em;
-            margin: 30px 0;
-            color: #ffd93d;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Self-lobotomy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@400;500&display=swap" rel="stylesheet">
+  <!--
+    Opened when you try to go to an AI chat site. Pure meme: no product pitch.
+    It is the one place in Gyrus that breaks the design system on purpose:
+    dank (ironic, overused-on-purpose meme culture) and deep-fried
+    (images run through filters until grainy, washed out and strangely
+    colored). Everything is drawn here in CSS and SVG: no hotlinked images.
+  -->
+  <style>
+    :root {
+      --ground: #eae4d6; --surface: #f2ede2; --ink: #282215; --muted: #6b604c;
+      --hairline: #c6b99f; --blue: #3b42db; --hot: #e85b30;
+      --fry-a: #ff3d00; --fry-b: #ffd600; --fry-c: #ff00a8; --fry-d: #00e5ff;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --ground: #1c1c1c; --surface: #232322; --ink: #f1ede4; --muted: #a69f92;
+              --hairline: #4a4640; --blue: #6f76ec; --hot: #d95526; }
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body { background: var(--ground); color: var(--ink); font: 400 16px/1.5 'Space Grotesk', system-ui, sans-serif; }
+
+    /* ── deep fryer ───────────────────────────────────────────── */
+    .fried {
+      background:
+        radial-gradient(circle at 18% 22%, var(--fry-b) 0 8%, transparent 26%),
+        radial-gradient(circle at 82% 70%, var(--fry-c) 0 6%, transparent 30%),
+        radial-gradient(circle at 70% 15%, var(--fry-d) 0 4%, transparent 22%),
+        linear-gradient(160deg, var(--fry-a), #8a0000 60%, #ff7a00);
+    }
+
+    /* ── the fryer: run any panel through the filters ───────────
+       1. #deepfry (SVG, end of body): oversaturate, posterize into colour
+          bands, sharpen until edges ring, split the red channel off for
+          chromatic aberration, then add grain.
+       2. ::before: 8x8 JPEG macroblocks with random brightness, drawn
+          once into a canvas at load (--macroblocks).
+       3. ::after: fine film grain on top.
+       --fry sets how hard: 1 = normal deep fry. */
+    .fry {
+      position: relative;
+      overflow: hidden;
+      isolation: isolate;
+      filter: url(#deepfry) contrast(calc(1 + .6 * var(--fry, 1))) saturate(calc(1 + 1.4 * var(--fry, 1)));
+    }
+    .fry::after {
+      content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.4' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      mix-blend-mode: overlay; opacity: 0.85;
+    }
+    /* jpeg blocks */
+    .fry::before {
+      content: ""; position: absolute; inset: 0; z-index: 6; pointer-events: none;
+      background-image: var(--macroblocks, none);
+      background-size: 256px 256px;
+      image-rendering: pixelated;
+      mix-blend-mode: hard-light;
+      opacity: calc(.55 * var(--fry, 1));
+    }
+    .flare {
+      position: absolute; z-index: 4; width: 140px; height: 140px; border-radius: 50%; pointer-events: none;
+      background: radial-gradient(circle, #fff 0 6%, rgba(255,240,180,.9) 10%, rgba(255,120,0,.5) 28%, transparent 62%);
+      mix-blend-mode: screen;
+    }
+    .flare::before, .flare::after {
+      content: ""; position: absolute; left: 50%; top: 50%; background: rgba(255,255,255,.85);
+      transform: translate(-50%, -50%);
+    }
+    .flare::before { width: 260%; height: 2px; }
+    .flare::after { width: 2px; height: 260%; }
+
+    .macro {
+      font-family: Impact, 'Anton', 'Haettenschweiler', sans-serif;
+      text-transform: uppercase; color: #fff; text-align: center; letter-spacing: .01em;
+      -webkit-text-stroke: 2px #000; paint-order: stroke fill;
+      text-shadow: 3px 3px 0 #000, -1px -1px 0 #000;
+      position: relative; z-index: 5; margin: 0; line-height: 1;
+    }
+
+    /* ── hero meme ────────────────────────────────────────────── */
+    .hero { min-height: 70vh; display: grid; grid-template-rows: auto 1fr auto; padding: 28px 16px; }
+    .hero .top { font-size: clamp(34px, 7vw, 76px); }
+    .hero .bottom { font-size: clamp(28px, 6vw, 64px); }
+    .hero .center { display: grid; place-items: center; position: relative; z-index: 5; }
+    .brain { width: min(320px, 60vw); height: auto; animation: vibe 0.12s steps(2) infinite; }
+    .brain .lobe { fill: #ff8fb1; stroke: #000; stroke-width: 4; }
+    .brain .fold { fill: none; stroke: #8a0035; stroke-width: 3; }
+    .brain .cut { stroke: #fff; stroke-width: 5; stroke-dasharray: 10 8; fill: none; }
+    .brain .eye { fill: #000; }
+    .emoji-rain { position: absolute; inset: 0; z-index: 4; pointer-events: none; font-size: 34px; }
+    .emoji-rain span { position: absolute; filter: saturate(3) contrast(1.4); }
+    @keyframes vibe { 0% { transform: translate(0,0) rotate(-.6deg); } 100% { transform: translate(2px,-1px) rotate(.6deg); } }
+
+    /* ── expanding brain ──────────────────────────────────────── */
+    .section-title { font: 500 13px/1 'Space Grotesk', sans-serif; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin: 0 0 16px; }
+    .wrap { max-width: 860px; margin: 0 auto; padding: 48px 16px; }
+    .galaxy { display: grid; border: 3px solid #000; }
+    .galaxy .row { display: grid; grid-template-columns: 1fr 1fr; border-top: 3px solid #000; min-height: 120px; }
+    .galaxy .row:first-child { border-top: 0; }
+    .galaxy .say { background: #fff; color: #000; padding: 16px; font: 500 18px/1.3 'Space Grotesk', sans-serif; display: flex; align-items: center; border-right: 3px solid #000; }
+    .galaxy .glow { display: grid; place-items: center; }
+    .galaxy .glow svg { width: 96px; height: auto; position: relative; z-index: 5; }
+    .galaxy .lobe { fill: #ff8fb1; stroke: #000; stroke-width: 4; }
+    /* the brain shrinks and dims each row: the lobotomy, step by step */
+    .galaxy .row:nth-child(1) .glow { background: radial-gradient(circle, #fff 0 8%, #ff00a8 30%, #12002e 75%); }
+    .galaxy .row:nth-child(2) .glow { background: radial-gradient(circle, #fff, #00e5ff 40%, #3200a8 80%); }
+    .galaxy .row:nth-child(3) .glow { background: radial-gradient(circle, #ffe08a, #c45a00 70%); }
+    .galaxy .row:nth-child(4) .glow { background: #3a3a3a; }
+    .galaxy .row:nth-child(1) .glow svg { width: 132px; filter: drop-shadow(0 0 18px #fff) drop-shadow(0 0 36px #ff00a8); }
+    .galaxy .row:nth-child(2) .glow svg { width: 100px; filter: drop-shadow(0 0 10px #fff); }
+    .galaxy .row:nth-child(3) .glow svg { width: 72px; }
+    .galaxy .row:nth-child(4) .glow svg { width: 30px; }
+
+    /* ── drake but no drake ───────────────────────────────────── */
+    .nah { display: grid; grid-template-columns: 96px 1fr; border: 3px solid #000; margin-top: 32px; }
+    .nah > div { padding: 16px; border-top: 3px solid #000; display: flex; align-items: center; }
+    .nah > div:nth-child(-n+2) { border-top: 0; }
+    .nah .face { font-size: 54px; justify-content: center; background: #ffd600; border-right: 3px solid #000; }
+    .nah .txt { background: #fff; color: #000; font: 500 18px/1.3 'Space Grotesk', sans-serif; }
+
+    /* ── way out ──────────────────────────────────────────────── */
+    .actions { display: flex; flex-wrap: wrap; gap: 12px; padding-top: 32px; }
+    .btn { display: inline-block; padding: 12px 20px; border: 1px solid var(--ink); border-radius: 0;
+           font: 500 16px/1 'Space Grotesk', system-ui, sans-serif; text-decoration: none; color: var(--ink); background: transparent; cursor: pointer; }
+    .btn:hover, .btn:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+    [hidden] { display: none !important; }
+
+    @media (max-width: 560px) {
+      .galaxy .row { grid-template-columns: 1fr; }
+      .galaxy .say { border-right: 0; border-bottom: 3px solid #000; }
+    }
+    @media (prefers-reduced-motion: reduce) { .brain { animation: none; } }
+  </style>
 </head>
 <body>
-    <h1>🧠 SELF-LOBOTOMY 🧠</h1>
 
-    <div class="meme-container">
-        <div class="meme-item">
-            <img src="https://i.etsystatic.com/27207670/r/il/2f0c9d/5883052442/il_fullxfull.5883052442_gjy7.jpg" alt="Lobotomy Meme 1">
-        </div>
-        
-        <div class="meme-item">
-            <img src="https://m.media-amazon.com/images/I/61pNqWhfN5L.jpg" alt="Lobotomy Meme 2">
-        </div>
-        
-        <div class="meme-item">
-            <img src="https://ih1.redbubble.net/image.5027067807.8235/flat,750x,075,f-pad,750x1000,f8f8f8.u3.jpg" alt="Lobotomy Meme 3">
-        </div>
-        
-        <div class="meme-item">
-            <img src="https://i.imgflip.com/87g61e.jpg" alt="Lobotomy Meme 4">
-        </div>
-        
-        <div class="meme-item">
-            <img src="https://i.etsystatic.com/12176547/r/il/813637/4505930776/il_1080xN.4505930776_psz9.jpg" alt="Lobotomy Meme 5">
-        </div>
-        
-        <div class="meme-item">
-            <img src="https://preview.redd.it/comets-max-barrier-has-us-all-acting-like-fiends-for-invites-v0-xrvqls4eqdcf1.png?width=640&crop=smart&auto=webp&s=48f9b8c5a7c94a94f242a27160908a0f7af240ab" alt="Lobotomy Meme 6">
-        </div>
+  <!-- 1. The macro -->
+  <header class="fry fried hero" aria-label="Meme: a deep-fried brain with a dotted cut line">
+    <div class="flare" style="left:8%;top:18%"></div>
+    <div class="flare" style="right:10%;top:52%"></div>
+    <div class="emoji-rain" aria-hidden="true">
+      <span style="left:6%;top:62%;transform:rotate(-18deg)">😂</span>
+      <span style="left:84%;top:14%;transform:rotate(12deg)">👌</span>
+      <span style="left:74%;top:78%">💯</span>
+      <span style="left:16%;top:30%;transform:rotate(25deg)">🔥</span>
+      <span style="left:88%;top:40%;transform:rotate(-8deg)">🅱️</span>
+      <span style="left:40%;top:84%;transform:rotate(14deg)">😳</span>
     </div>
-    
-    <div class="message">Welcome to the lobotomy club! 🎉</div>
+
+    <p class="macro top">When you open the chatbot<br>before opening a single tab</p>
+    <div class="center">
+      <svg class="brain" viewBox="0 0 220 180" role="img" aria-label="A pink cartoon brain with a dotted cut line and two small eyes">
+        <path class="lobe" d="M110 22 C78 8 42 20 32 48 C12 56 10 90 26 104 C20 128 40 152 66 150 C78 166 102 166 110 152 C118 166 142 166 154 150 C180 152 200 128 194 104 C210 90 208 56 188 48 C178 20 142 8 110 22 Z"/>
+        <path class="fold" d="M110 22 L110 150"/>
+        <path class="fold" d="M44 56 C62 50 68 66 84 60"/>
+        <path class="fold" d="M32 92 C50 82 58 100 78 94"/>
+        <path class="fold" d="M176 56 C158 50 152 66 136 60"/>
+        <path class="fold" d="M188 92 C170 82 162 100 142 94"/>
+        <circle class="eye" cx="86" cy="118" r="6"/>
+        <circle class="eye" cx="134" cy="118" r="6"/>
+        <path class="cut" d="M2 40 C66 58 154 34 218 52"/>
+      </svg>
+    </div>
+    <p class="macro bottom">Self-lobotomy speedrun<br>any%</p>
+  </header>
+
+  <main class="wrap">
+
+    <!-- Shrinking brain: the lobotomy in four easy steps -->
+    <h2 class="section-title">Brain reduction chart (scientifically accurate)</h2>
+    <div class="galaxy fry" style="--fry:.6">
+      <div class="row"><div class="say">Thinking about the problem yourself.</div>
+        <div class="glow"><svg viewBox="0 0 220 180" aria-hidden="true"><path class="lobe" d="M110 22 C78 8 42 20 32 48 C12 56 10 90 26 104 C20 128 40 152 66 150 C78 166 102 166 110 152 C118 166 142 166 154 150 C180 152 200 128 194 104 C210 90 208 56 188 48 C178 20 142 8 110 22 Z"/></svg></div></div>
+      <div class="row"><div class="say">Googling it.</div>
+        <div class="glow"><svg viewBox="0 0 220 180" aria-hidden="true"><path class="lobe" d="M110 22 C78 8 42 20 32 48 C12 56 10 90 26 104 C20 128 40 152 66 150 C78 166 102 166 110 152 C118 166 142 166 154 150 C180 152 200 128 194 104 C210 90 208 56 188 48 C178 20 142 8 110 22 Z"/></svg></div></div>
+      <div class="row"><div class="say">Asking the chatbot.</div>
+        <div class="glow"><svg viewBox="0 0 220 180" aria-hidden="true"><path class="lobe" d="M110 22 C78 8 42 20 32 48 C12 56 10 90 26 104 C20 128 40 152 66 150 C78 166 102 166 110 152 C118 166 142 166 154 150 C180 152 200 128 194 104 C210 90 208 56 188 48 C178 20 142 8 110 22 Z"/></svg></div></div>
+      <div class="row"><div class="say">Asking the chatbot what to ask the chatbot.</div>
+        <div class="glow"><svg viewBox="0 0 220 180" aria-hidden="true"><path class="lobe" d="M110 22 C78 8 42 20 32 48 C12 56 10 90 26 104 C20 128 40 152 66 150 C78 166 102 166 110 152 C118 166 142 166 154 150 C180 152 200 128 194 104 C210 90 208 56 188 48 C178 20 142 8 110 22 Z"/></svg></div></div>
+    </div>
+
+    <!-- Reject / approve, no copyrighted rapper required -->
+    <div class="nah fry" style="--fry:.8" role="img" aria-label="Meme: reject having thoughts, approve the self-lobotomy">
+      <div class="face">🙅</div><div class="txt">Having one (1) original thought</div>
+      <div class="face">👉</div><div class="txt">Outsourcing the entire frontal lobe</div>
+    </div>
+
+    <div class="actions">
+      <a class="btn" id="go-anyway" href="#" hidden target="_blank" rel="noopener noreferrer">Proceed with lobotomy</a>
+    </div>
+  </main>
+
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <filter id="deepfry" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+      <feColorMatrix type="saturate" values="2.2" result="sat"/>
+      <!-- posterize: colour banding like a 40%-quality JPEG -->
+      <feComponentTransfer in="sat" result="bands">
+        <feFuncR type="discrete" tableValues="0 .2 .45 .7 .9 1"/>
+        <feFuncG type="discrete" tableValues="0 .25 .5 .75 1"/>
+        <feFuncB type="discrete" tableValues="0 .3 .6 1"/>
+      </feComponentTransfer>
+      <!-- oversharpen: halos and ringing around every edge -->
+      <feConvolveMatrix in="bands" order="3" kernelMatrix="0 -1.4 0 -1.4 6.6 -1.4 0 -1.4 0" preserveAlpha="true" result="sharp"/>
+      <!-- chromatic aberration: shove the red channel sideways -->
+      <feColorMatrix in="sharp" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="red"/>
+      <feOffset in="red" dx="3" dy="1" result="redShift"/>
+      <feColorMatrix in="sharp" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0" result="gb"/>
+      <feBlend in="redShift" in2="gb" mode="screen" result="split"/>
+      <!-- grain -->
+      <feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="7" result="noise"/>
+      <feColorMatrix in="noise" type="saturate" values="0" result="mono"/>
+      <feComposite in="split" in2="mono" operator="arithmetic" k1="0" k2="1" k3=".22" k4="-.11"/>
+    </filter>
+  </svg>
+
+  <script>
+    // Fake JPEG compression: random-brightness 8x8 macroblocks, a few with
+    // blocky DCT-style stripes (mosquito noise), drawn once and tiled.
+    (function () {
+      var c = document.createElement('canvas');
+      c.width = c.height = 256;
+      var g = c.getContext('2d');
+      if (!g) return;
+      for (var y = 0; y < 256; y += 8) {
+        for (var x = 0; x < 256; x += 8) {
+          var v = Math.floor(Math.random() * 255);
+          g.fillStyle = 'rgba(' + v + ',' + v + ',' + v + ',' + (0.08 + Math.random() * 0.22) + ')';
+          g.fillRect(x, y, 8, 8);
+          if (Math.random() < 0.18) {
+            g.fillStyle = 'rgba(' + (Math.random() < .5 ? '0,0,0' : '255,255,255') + ',.35)';
+            var horiz = Math.random() < .5;
+            for (var i = 0; i < 8; i += 2) {
+              if (horiz) g.fillRect(x, y + i, 8, 1); else g.fillRect(x + i, y, 1, 8);
+            }
+          }
+        }
+      }
+      document.documentElement.style.setProperty('--macroblocks', 'url(' + c.toDataURL('image/png') + ')');
+    })();
+  </script>
+
+  <script>
+    (function () {
+      var raw = new URLSearchParams(window.location.search).get('to');
+      if (!raw) return;
+      var url;
+      try { url = new URL(raw); } catch (e) { return; }
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
+      var go = document.getElementById('go-anyway');
+      go.href = url.href;
+      go.hidden = false;
+    })();
+  </script>
 </body>
-</html> 
+</html>

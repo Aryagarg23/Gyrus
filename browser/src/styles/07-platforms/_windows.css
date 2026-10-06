@@ -1,170 +1,39 @@
 /* -------------------------------------------------------------------------- */
-/*                       07-platforms/_windows.css                             */
+/*   07-platforms/_windows.css: window buttons at the right end of the top    */
+/*   bar. Electron only.                                                      */
 /* -------------------------------------------------------------------------- */
 
-/* Windows/Linux-specific layout adjustments */
-.platform-windows .app-header {
-  /* Windows/Linux: Navigation on left, window controls on right */
-  justify-content: space-between;
+.platform-windows .topbar {
+  padding-right: var(--space-2);
 }
 
-.platform-windows .nav-controls-container {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  flex: 0 0 auto; /* Don't grow, don't shrink, use natural size */
-}
-
-.platform-windows .url-bar {
-  flex: 1 1 auto; /* Take up all remaining space, allow growing and shrinking */
-  margin: 0 var(--space-4);
-  max-width: none; /* Allow unlimited growth */
-}
-
-.platform-windows .header__controls-right {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  flex: 0 0 auto; /* Don't grow, don't shrink, use natural size */
-  min-width: 140px; /* Ensure minimum width for menu + window controls */
-}
-
-/* Windows-specific window controls styling */
 .platform-windows .window-controls {
-  /* Windows: Pill divided into 3 equal sections with text icons and neumorphic styling */
-  display: flex;
-  align-items: center;
-  -webkit-app-region: no-drag;
-  height: var(--header-element-content-height);
-  box-sizing: border-box;
-  padding: 0;
-  border-radius: 999vw;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: linear-gradient(
-    -75deg,
-    rgba(255, 255, 255, 0.05),
-    rgba(255, 255, 255, 0.15),
-    rgba(255, 255, 255, 0.05)
-  );
-  box-shadow: inset 0 0.5px 1px rgba(0, 0, 0, 0.1),
-    inset 0 -1px 1px rgba(255, 255, 255, 0.7);
-  overflow: hidden;
-  min-width: 120px;
-  flex: 0 0 auto;
+  margin-left: var(--space-3);
+  gap: var(--space-1);
 }
 
+/* Window buttons: quiet icon buttons. */
 .platform-windows .window-controls__button {
-  flex: 1;
-  height: 100%;
-  border: none;
-  cursor: pointer;
-  background: transparent;
-  transition: all var(--transition-duration-fast) ease-in-out;
-  position: relative;
-  border-radius: 0;
-  color: var(--color-text-secondary);
-  font-size: 12px;
-  font-weight: bold;
-}
-
-.platform-windows .window-controls__button {
-  border-radius: 0; /* Remove individual button pill shapes */
-}
-
-.platform-windows .window-controls__button:active {
-  box-shadow: var(--shadow-neumorphic-inset);
-}
-
-/* Windows window control button colors - only on hover */
-.platform-windows .window-controls__button {
-  background: transparent;
-  color: var(--color-text-secondary);
-}
-
-.platform-windows .window-controls__button--close:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 87, 87, 0.8),
-    rgba(255, 87, 87, 0.6)
-  );
-  color: white;
-}
-
-.platform-windows .window-controls__button--minimize:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 189, 46, 0.8),
-    rgba(255, 189, 46, 0.6)
-  );
-  color: white;
-}
-
-.platform-windows .window-controls__button--maximize:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(39, 201, 63, 0.8),
-    rgba(39, 201, 63, 0.6)
-  );
-  color: white;
+  width: var(--space-7);
+  border-radius: var(--radius-button);
+  color: var(--color-ink-muted);
+  transition: background-color var(--duration-hover) var(--ease-hover);
 }
 
 .platform-windows .window-controls__button:hover {
-  transform: translateY(-1px);
+  background-color: var(--color-fill);
 }
 
-.platform-windows .window-controls__button:active {
-  transform: translateY(0);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.15),
-    inset 0 -1px 1px rgba(255, 255, 255, 0.7);
-}
-
-/* Windows button icons */
-.platform-windows .window-controls__button--close::before {
-  content: "×";
+.platform-windows .window-controls__button::before {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 14px;
-  font-weight: bold;
-  color: var(--color-text-secondary);
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-base);
   line-height: 1;
-  transition: color var(--transition-duration-fast) ease-in-out;
 }
 
-.platform-windows .window-controls__button--minimize::before {
-  content: "−";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 14px;
-  font-weight: bold;
-  color: var(--color-text-secondary);
-  line-height: 1;
-  transition: color var(--transition-duration-fast) ease-in-out;
-}
-
-.platform-windows .window-controls__button--maximize::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 12px;
-  height: 10px;
-  box-sizing: border-box;
-  border: 1.5px solid var(--color-text-secondary);
-  border-radius: 2px;
-  transform: translate(-50%, -50%);
-  transition: border-color var(--transition-duration-fast) ease-in-out;
-  margin-top: -0.5px;
-}
-
-/* Icon color changes on hover */
-.platform-windows .window-controls__button:hover::before {
-  color: white;
-}
-
-.platform-windows .window-controls__button--maximize:hover::before {
-  border-color: white;
-} 
+.platform-windows .window-controls__button--minimize::before { content: "\2212"; }
+.platform-windows .window-controls__button--maximize::before { content: "\25a1"; }
+.platform-windows .window-controls__button--close::before { content: "\00d7"; }

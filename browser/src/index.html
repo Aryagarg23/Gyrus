@@ -1,12 +1,11 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0" />
     <title>Gyrus</title>
     <!-- ITCSS: Settings -->
     <link rel="stylesheet" href="styles/01-settings/_colors.css" />
-    <link rel="stylesheet" href="styles/01-settings/_shadows.css" />
     <link rel="stylesheet" href="styles/01-settings/_typography.css" />
     <link rel="stylesheet" href="styles/01-settings/_spacing.css" />
     <link rel="stylesheet" href="styles/01-settings/_transitions.css" />
@@ -14,88 +13,61 @@
     <link rel="stylesheet" href="styles/04-elements/_base.css" />
     <!-- ITCSS: Objects -->
     <link rel="stylesheet" href="styles/05-objects/_layout.css" />
-    <link rel="stylesheet" href="styles/05-objects/_focus-mode.css" />
     <!-- ITCSS: Components -->
-    <link rel="stylesheet" href="styles/06-components/_query-input.css"
-    <link rel="stylesheet" href="styles/06-components/_webview.css" />
-    <link rel="stylesheet" href="styles/06-components/_window-controls.css" />
+    <link rel="stylesheet" href="styles/06-components/_controls.css" />
+    <link rel="stylesheet" href="styles/06-components/_rail.css" />
     <link rel="stylesheet" href="styles/06-components/_url-bar.css" />
-    <link rel="stylesheet" href="styles/06-components/_menu-button.css" />
-    <link rel="stylesheet" href="styles/06-components/_nav-controls.css" />
-    <link rel="stylesheet" href="styles/06-components/_sidebar.css" />
-    <link rel="stylesheet" href="styles/06-components/_right-sidebar.css" />
-    <link rel="stylesheet" href="styles/06-components/_buffer-button.css" />
-    <link rel="stylesheet" href="styles/06-components/_network-button.css" />
+    <link rel="stylesheet" href="styles/06-components/_window-controls.css" />
+    <link rel="stylesheet" href="styles/06-components/_start.css" />
+    <link rel="stylesheet" href="styles/06-components/_run.css" />
+    <link rel="stylesheet" href="styles/06-components/_task.css" />
+    <link rel="stylesheet" href="styles/06-components/_webview.css" />
     <link rel="stylesheet" href="styles/06-components/_network-modal.css" />
-    <link rel="stylesheet" href="styles/06-components/_window-controls-macos.css" />
+    <link rel="stylesheet" href="styles/06-components/_about-panel.css" />
     <!-- ITCSS: Platforms -->
     <link rel="stylesheet" href="styles/07-platforms/_macos.css" />
     <link rel="stylesheet" href="styles/07-platforms/_windows.css" />
   </head>
-  <body>
-    <!-- Focus overlay for editor mode -->
-    <div class="focus-overlay"></div>
+  <body data-view="start">
+    <div class="app">
+      <!-- Left rail: New search, Tasks (General + one per task), Memory, About -->
+      <div id="rail-container" class="app__rail"></div>
 
-    <!-- Main header -->
-    <header class="app-header">
-      <!-- Drag button that covers entire header area -->
-      <button class="header-drag-button" type="button"></button>
+      <div class="app__main">
+        <!-- Top bar: back / forward / address while a page is open; window buttons in Electron -->
+        <header class="topbar">
+          <div id="nav-controls-container" class="topbar__nav"></div>
+          <div id="url-bar-container" class="topbar__address"></div>
+          <div id="window-controls-container" class="topbar__window"></div>
+        </header>
 
-      <!-- Buffer button for stable hover detection -->
-      <div id="buffer-button-container"></div>
+        <main class="stage">
+          <!-- Start screen (empty state) -->
+          <section class="view view--start" id="start-container" aria-label="New search"></section>
 
-      <!-- Navigation controls will be inserted here -->
-      <div id="nav-controls-container"></div>
+          <!-- A search happening: the intent guess and the crew at work (app.js renderRun) -->
+          <section class="view view--run" id="run-view" aria-live="polite" hidden></section>
 
-      <!-- URL bar -->
-      <div id="url-bar-container"></div>
+          <!-- A task: its intent, what the crew did, and the reading list (app.js renderTaskView) -->
+          <section class="view view--task" id="task-view" hidden></section>
 
-      <!-- Right side controls -->
-      <div class="header__controls-right">
-        <!-- Network button -->
-        <div id="network-button-container"></div>
-
-        <!-- Menu button -->
-        <div id="menu-button-container"></div>
-
-
-        <!-- Window controls will be inserted here -->
-        <div id="window-controls-container"></div>
+          <!-- One open page, with a way back to the list it came from -->
+          <section class="view view--page" id="webview-container" aria-label="Page"></section>
+        </main>
       </div>
-    </header>
-
-    <!-- Main container for sidebar and content -->
-    <div class="main-container">
-      <!-- Left sidebar component (Task/Query) -->
-      <div id="sidebar-container"></div>
-
-      <!-- Main content area -->
-      <main class="content-area">
-        <!-- Hover detection zones -->
-        <div class="hover-detection-zone hover-detection-zone--top"></div>
-        <div class="hover-detection-zone hover-detection-zone--left"></div>
-        <div class="hover-detection-zone hover-detection-zone--right"></div>
-
-        <!-- Test button for tab creation -->
-
-        <!--Query input container-->
-        <div id="query-input-container"> </div>
-
-        <!-- Webview component -->
-        <div id="webview-container"></div>
-      </main>
-
-      <!-- Right sidebar component (Browser Tabs) -->
-      <div id="right-sidebar-container"></div>
     </div>
 
-    <!-- Network Modal -->
+    <!-- Memory graph -->
     <div id="network-modal-container"></div>
 
     <!-- D3.js -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <!-- JavaScript -->
+    <script src="js/platform.js"></script>
+    <script src="js/demo-seed.js"></script>
+    <script src="js/api.js"></script>
     <script src="js/components.js"></script>
     <script src="js/app.js"></script>
+    <script src="js/easter-eggs.js"></script>
   </body>
 </html>
