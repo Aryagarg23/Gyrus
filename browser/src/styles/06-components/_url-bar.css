@@ -1,14 +1,8 @@
-/* Address bar in the header. Header buttons are .icon-buttons (_controls.css). */
-#url-bar-container {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-}
-
+/* Top bar contents while a page is open: back, forward, address.
+   Buttons are .icon-buttons (_controls.css). */
 .url-bar {
   flex: 1 1 auto;
   min-width: 0;
-  margin: 0 var(--space-3);
   -webkit-app-region: no-drag;
 }
 
@@ -20,13 +14,9 @@
   border-radius: var(--radius-input);
   background-color: var(--color-fill);
   color: var(--color-ink);
-  font-size: var(--font-size-base);
-  text-align: center;
+  font-size: var(--font-size-sm);
+  text-overflow: ellipsis;
   cursor: text;
-}
-
-.url-bar__input:focus {
-  text-align: left;
 }
 
 .url-bar__input::placeholder {

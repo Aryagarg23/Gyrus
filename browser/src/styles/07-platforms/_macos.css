@@ -1,35 +1,15 @@
 /* -------------------------------------------------------------------------- */
-/*   07-platforms/_macos.css: window buttons left, navigation right.          */
+/*   07-platforms/_macos.css: window buttons at the top of the rail           */
+/*   (components.js moves them there). Electron only.                         */
 /* -------------------------------------------------------------------------- */
 
-.platform-macos .app-header {
-  justify-content: flex-start;
-  padding-left: 0;
-  -webkit-app-region: drag;
-}
-
-.platform-macos .url-bar {
-  margin: 0 var(--space-4);
-}
-
-.platform-macos .header__controls-right {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  flex: 0 0 auto;
-}
-
-.platform-macos .nav-controls-container {
-  margin-right: var(--space-3);
-}
-
-.platform-macos .window-controls {
+.platform-macos .rail__head .window-controls {
   gap: var(--space-2);
-  padding: 0 var(--space-4);
+  padding: 0 var(--space-2);
 }
 
 /* Traffic lights keep their native colours and round shape: the one place
-   in the shell with a radius or non-token colours, by design. */
+   in the shell with non-token colours, by design. */
 .platform-macos .window-controls__button {
   width: var(--space-3);
   height: var(--space-3);

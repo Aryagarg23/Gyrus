@@ -25,7 +25,6 @@ function createWindow() {
   if (process.platform === 'darwin') {
     windowConfig.titleBarStyle = 'hidden';
     windowConfig.titleBarOverlay = false;
-    console.log('macOS window config:', windowConfig);
   }
 
   const mainWindow = new BrowserWindow(windowConfig);

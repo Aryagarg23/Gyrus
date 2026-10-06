@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stand-in page</title>
+  <!--
+    Demo stand-in for a page. With no backend running, Gyrus does not search the
+    web: every source the demo crew "finds", and every everyday search, opens this
+    page instead, described by URL parameters (js/api.js demoPageUrl):
+      kind    research | news  -> a source the crew picked
+              answer | shopping | site | search -> a normal search Gyrus left alone
+      title   the source title (always marked "(example)")
+      source  where the crew got it, e.g. "arXiv"
+      why     one line on why the crew picked it
+      q       the search, for the search-results kinds
+    Same tokens as the shell, so it reads as part of Gyrus.
+  -->
+  <link rel="stylesheet" href="styles/01-settings/_colors.css">
+  <link rel="stylesheet" href="styles/01-settings/_typography.css">
+  <link rel="stylesheet" href="styles/01-settings/_spacing.css">
+  <link rel="stylesheet" href="styles/01-settings/_transitions.css">
+  <link rel="stylesheet" href="styles/04-elements/_base.css">
+  <style>
+    html, body { height: auto; min-height: 100%; }
+    body { display: block; overflow-y: auto; user-select: text; -webkit-user-select: text; }
+    .reader {
+      max-width: var(--width-measure);
+      margin: 0 auto;
+      padding: var(--space-7) var(--space-4);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+    .reader__source { margin: 0; }
+    .reader__title {
+      margin: 0;
+      font-size: var(--font-size-display);
+      font-weight: var(--font-weight-bold);
+      line-height: var(--line-height-tight);
+      overflow-wrap: anywhere;
+    }
+    .reader__why { margin: 0; font-size: var(--font-size-title); color: var(--color-ink-muted); }
+    .reader__note {
+      margin: 0;
+      padding: var(--space-4) var(--space-5);
+      border-radius: var(--radius-card);
+      background-color: var(--color-surface);
+      font-size: var(--font-size-base);
+    }
+    .reader__note p { margin: 0; }
+    .reader__note p + p { margin-top: var(--space-2); color: var(--color-ink-muted); }
+    .results {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      border-radius: var(--radius-card);
+      background-color: var(--color-surface);
+      overflow: hidden;
+    }
+    .results li { padding: var(--space-3) var(--space-4); border-bottom: var(--border-hairline); }
+    .results li:last-child { border-bottom: none; }
+    .results strong { display: block; font-weight: var(--font-weight-semibold); }
+    .results span { font-size: var(--font-size-sm); color: var(--color-ink-muted); }
+    .reader__back { align-self: flex-start; font-weight: var(--font-weight-semibold); text-decoration: none; }
+    .reader__back:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <article class="reader">
+    <p class="reader__source label"></p>
+    <h1 class="reader__title"></h1>
+    <p class="reader__why" hidden></p>
+    <ul class="results" hidden></ul>
+    <div class="reader__note"></div>
+    <a class="reader__back" href="#back">Back to sources</a>
+  </article>
+
+  <script>
+    (function () {
+      const params = new URLSearchParams(location.search);
+      const kind = params.get('kind') || 'research';
+      const isSource = kind === 'research' || kind === 'news';
+      const q = (params.get('q') || '').trim();
+      const title = params.get('title') || (q ? `${q}: search results (example)` : 'Stand-in page (example)');
+
+      const $ = (sel) => document.querySelector(sel);
+      const para = (text) => { const p = document.createElement('p'); p.textContent = text; return p; };
+
+      document.title = title;
+      $('.reader__title').textContent = title;
+
+      if (isSource) {
+        $('.reader__source').textContent = `${params.get('source') || 'Source'} (example)`;
+        const why = params.get('why');
+        if (why) {
+          $('.reader__why').textContent = `Why the crew picked this: ${why}`;
+          $('.reader__why').hidden = false;
+        }
+        $('.reader__note').append(
+          para('In the full app this would be the real page the crew found. This demo does not search the web.'),
+          para('Go back to the reading list to open the other sources.')
+        );
+      } else {
+        $('.reader__source').textContent = kind === 'site' ? 'Site (example)' : 'Search results (example)';
+        if (kind !== 'site' && q) {
+          const list = $('.results');
+          [
+            [`${q}: a general overview (example)`, 'The kind of page a normal search puts first.'],
+            [`${q}: questions people ask (example)`, 'Short answers to common follow-ups.'],
+            [`${q}: where to look next (example)`, 'Links onward, if you want to dig in.'],
+          ].forEach(([t, s]) => {
+            const li = document.createElement('li');
+            const strong = document.createElement('strong');
+            strong.textContent = t;
+            const span = document.createElement('span');
+            span.textContent = s;
+            li.append(strong, span);
+            list.appendChild(li);
+          });
+          list.hidden = false;
+        }
+        $('.reader__note').append(
+          para(kind === 'site'
+            ? 'In the full app this would be the site you asked for. This demo does not open the web.'
+            : 'In the full app this would be a normal web search. Gyrus leaves searches like this alone and does not send a crew. This demo does not search the web.'),
+          para('Try a research or news search to see the crew.')
+        );
+        $('.reader__back').textContent = 'Back to Gyrus';
+      }
+
+      // Inside the plain-browser iframe, tell the shell. In Electron's <webview>
+      // the shell sees the #back navigation instead (app.js did-navigate-in-page).
+      $('.reader__back').addEventListener('click', (e) => {
+        if (window.parent && window.parent !== window) {
+          e.preventDefault();
+          window.parent.postMessage({ gyrus: 'back' }, '*');
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

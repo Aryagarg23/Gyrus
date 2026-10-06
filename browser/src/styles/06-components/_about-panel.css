@@ -50,7 +50,7 @@
 }
 
 /* Hero mark: the same tile as the start page (.hero-mark in _controls.css),
-   brain glyph as a white SVG over the gradient (same paths as components/query-input.html). */
+   brain glyph as a white SVG over the gradient (same paths as components/start-screen.html). */
 .gyrus-about__head::before {
   content: "";
   width: calc(var(--hero-size) * 0.75);

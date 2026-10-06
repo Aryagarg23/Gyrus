@@ -1,5 +1,6 @@
-// Loads the HTML components into their containers and applies the
-// platform layout (macOS: window buttons left; Windows/Linux: right).
+// Loads the HTML components into their containers and places the window
+// buttons for the platform (macOS: top of the rail; Windows/Linux: right end
+// of the top bar). Window buttons only exist in Electron.
 class ComponentManager {
   constructor() {
     this.platform = this.detectPlatform();
@@ -15,6 +16,7 @@ class ComponentManager {
   async loadComponent(name) {
     try {
       const response = await fetch(`components/${name}.html`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const html = await response.text();
       this.components[name] = html;
       return html;
@@ -34,33 +36,24 @@ class ComponentManager {
   }
 
   setupPlatformSpecificLayout() {
-    const header = document.querySelector('.app-header');
-    const navControlsContainer = document.querySelector('.nav-controls-container');
-    const controlsRight = document.querySelector('.header__controls-right');
-
-    if (this.platform === 'darwin') {
-      header.classList.add('platform-macos');
-      const windowControls = document.querySelector('.window-controls');
-      if (windowControls) header.insertBefore(windowControls, header.firstChild);
-      if (navControlsContainer) controlsRight.insertBefore(navControlsContainer, controlsRight.firstChild);
-    } else {
-      header.classList.add('platform-windows');
-    }
+    const isMac = this.platform === 'darwin';
+    document.body.classList.add(isMac ? 'platform-macos' : 'platform-windows');
+    if (!isMac) return;
+    // macOS: traffic lights at the top-left, which is the top of the rail.
+    const windowControls = document.querySelector('.topbar .window-controls');
+    const railHead = document.querySelector('.rail__head');
+    if (windowControls && railHead) railHead.appendChild(windowControls);
   }
 
   async initialize() {
     const windowControls = this.platform === 'darwin' ? 'window-controls-macos' : 'window-controls';
     const placements = [
-      ['sidebar-container', 'sidebar'],
-      ['right-sidebar-container', 'right-sidebar'],
+      ['rail-container', 'rail'],
+      ['start-container', 'start-screen'],
       ['nav-controls-container', 'navigation-controls'],
       ['url-bar-container', 'url-bar'],
-      ['menu-button-container', 'menu-button'],
-      ['query-input-container', 'query-input'],
       ['window-controls-container', windowControls],
       ['webview-container', 'webview'],
-      ['buffer-button-container', 'buffer-button'],
-      ['network-button-container', 'network-button'],
       ['network-modal-container', 'network-modal']
     ];
 

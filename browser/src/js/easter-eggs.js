@@ -124,7 +124,7 @@
     console.log('%cRaihan: OMEGA DEVTOOLS PUSH! Za console is open!!', body);
     console.log('%cKaaustaaub: console thing in the middle', body);
     console.log('%cArya: go you go!!', body);
-    console.log('%cWho built this: open the menu and choose About, or run GyrusEasterEggs.openAbout().', body);
+    console.log('%cWho built this: click About at the bottom of the left rail, or run GyrusEasterEggs.openAbout().', body);
   }
 
   window.GyrusEasterEggs = { openAbout, closeAbout };

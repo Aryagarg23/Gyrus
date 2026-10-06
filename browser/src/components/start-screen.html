@@ -1,0 +1,42 @@
+<div class="start">
+  <div class="hero-mark" aria-hidden="true">
+    <svg viewBox="0 0 24 24">
+      <path d="M11.4 4.6C9.8 3.3 7.1 3.5 6 5.4 4 5.7 3 7.8 3.8 9.6 2.6 11 2.9 13.6 4.7 14.6 4.6 16.9 6.6 18.8 8.9 18.4c.8 1.3 2 1.7 2.5 1.2V4.6Z"/>
+      <path d="M12.6 4.6c1.6-1.3 4.3-1.1 5.4.8 2 .3 3 2.4 2.2 4.2 1.2 1.4.9 4-.9 5 .1 2.3-1.9 4.2-4.2 3.8-.8 1.3-2 1.7-2.5 1.2V4.6Z"/>
+      <path d="M6.4 8.4c1.2-.5 2.1.2 2.6 1.1M5.4 12.3c1.3-.7 2.6-.2 3.2.9M7.4 16c.9-.8 2.1-.7 2.9 0M17.6 8.4c-1.2-.5-2.1.2-2.6 1.1M18.6 12.3c-1.3-.7-2.6-.2-3.2.9M16.6 16c-.9-.8-2.1-.7-2.9 0"/>
+    </svg>
+  </div>
+  <h1 class="start__title">Gyrus</h1>
+  <p class="start__lede">A browser that sends a small crew to help you research, instead of answering for you.</p>
+
+  <form class="search" role="search" autocomplete="off">
+    <input class="search__input" type="text" name="q" placeholder="What do you want to look into?" aria-label="What do you want to look into?" spellcheck="false" />
+    <button class="search__submit button" type="submit">Search</button>
+  </form>
+
+  <div class="start__examples" aria-label="Try an example">
+    <button class="example" type="button" data-query="Why do we procrastinate?">
+      <span class="example__intent label">Research</span>
+      <span class="example__text">Why do we procrastinate?</span>
+    </button>
+    <button class="example" type="button" data-query="Latest on neuromorphic chips">
+      <span class="example__intent label">News</span>
+      <span class="example__text">Latest on neuromorphic chips</span>
+    </button>
+    <button class="example" type="button" data-query="Buy a mechanical keyboard">
+      <span class="example__intent label">Shopping</span>
+      <span class="example__text">Buy a mechanical keyboard</span>
+    </button>
+  </div>
+
+  <div class="start__how">
+    <h2 class="label">How it works</h2>
+    <ol>
+      <li>You search like normal.</li>
+      <li>Gyrus guesses what you're trying to do.</li>
+      <li>For research or news, a crew gathers sources into a task you can read and keep.</li>
+    </ol>
+  </div>
+
+  <p class="start__demo demo-only">Demo: the crew and its sources are simulated.</p>
+</div>

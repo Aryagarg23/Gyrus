@@ -4,7 +4,7 @@
    states, line icons, links and focus rings. Nothing else is coloured. */
 :root {
   --color-ground: #f2f2f7;          /* grouped background */
-  --color-elevated: #f2f2f7;        /* sidebars and header */
+  --color-elevated: #f2f2f7;        /* rail and top bar */
   --color-surface: #ffffff;         /* cards and panels */
   --color-ink: #1c1c1e;             /* primary text */
   --color-ink-muted: #6e6e73;       /* secondary text */

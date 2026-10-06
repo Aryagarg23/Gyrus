@@ -1,44 +1,74 @@
 /* -------------------------------------------------------------------------- */
-/*                        06-components/_webview.css                          */
-/*   The page area: status line, the webview (Electron) or iframe (plain      */
-/*   browser), and the preview card for external pages in a plain browser     */
-/*   (built by js/platform.js).                                               */
+/*   06-components/_webview.css: the page view (components/webview.html).    */
+/*   A bar with the way back ("Back to sources" / "Back to General"), what    */
+/*   the page is and how it got here, then the <webview> (Electron) or the    */
+/*   <iframe> (plain browser, js/platform.js).                                */
 /* -------------------------------------------------------------------------- */
 
-.webview-container {
+.page {
   position: absolute;
   inset: 0;
-  z-index: 1;
-  overflow: hidden;
-  background-color: var(--color-ground);
+  display: flex;
+  flex-direction: column;
 }
 
-/* One quiet line saying how the open tab got here. */
-.page-status {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: var(--page-status-height);
+.page__bar {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
-  padding: 0 var(--space-4);
+  gap: var(--space-3);
+  min-height: var(--header-element-height);
+  padding: var(--space-1) var(--space-3);
   border-bottom: var(--border-hairline);
-  background-color: var(--color-elevated);
-  white-space: nowrap;
+  background-color: var(--color-surface);
 }
 
-.page-status[hidden] {
+.page__back {
+  flex: 0 0 auto;
+  gap: var(--space-1);
+  padding-left: var(--space-1);
+}
+
+.page__about {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: var(--line-height-tight);
+}
+
+.page__title {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: var(--font-weight-semibold);
+}
+
+.page__origin {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--font-size-caption);
+}
+
+.page__actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.page__actions [hidden] {
   display: none;
 }
 
-.page-status__text {
-  overflow: hidden;
-  text-overflow: ellipsis;
+.page__frame {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
-.browser-webview,
-.page-preview {
+.browser-webview {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -49,74 +79,12 @@
   background-color: var(--color-ground);
 }
 
-.webview-container.has-status .browser-webview,
-.webview-container.has-status .page-preview {
-  top: var(--page-status-height);
-  height: calc(100% - var(--page-status-height));
-}
-
-.webview-loading {
-  position: absolute;
-  top: var(--space-2);
-  right: var(--space-4);
-  z-index: 2;
-  display: none;
-  line-height: calc(var(--page-status-height) - var(--space-4));
-  pointer-events: none;
-}
-
-/* Preview card for an external page (plain browser only). */
-.page-preview {
-  z-index: 1;
-  display: none;
-  overflow-y: auto;
-  padding: var(--space-7) var(--space-4);
-}
-
-.page-preview.is-visible {
-  display: block;
-}
-
-.page-preview__card {
-  max-width: var(--width-measure);
-  margin: 0 auto;
-  padding: var(--space-5);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-
-.page-preview__title {
-  margin: 0;
-  font-size: var(--font-size-display);
-  font-weight: var(--font-weight-bold);
-  line-height: var(--line-height-tight);
-  overflow-wrap: anywhere;
-}
-
-.page-preview__url {
-  margin: 0;
-  font-size: var(--font-size-sm);
-  color: var(--color-ink-muted);
-  overflow-wrap: anywhere;
-  user-select: text;
-}
-
-.page-preview__snippet {
-  margin: 0;
-  padding-top: var(--space-3);
-  border-top: var(--border-hairline);
-  font-size: var(--font-size-title);
-  user-select: text;
-}
-
-.page-preview__actions {
-  padding-top: var(--space-2);
-}
-
-.page-preview__note {
-  margin: var(--space-2) 0 0;
-  font-size: var(--font-size-caption);
-  color: var(--color-ink-muted);
+@media (max-width: 560px) {
+  .page__back-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
 }

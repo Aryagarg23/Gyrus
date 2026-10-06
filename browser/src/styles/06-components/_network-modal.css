@@ -1,6 +1,7 @@
 /* -------------------------------------------------------------------------- */
 /*                     06-components/_network-modal.css                       */
-/*   Memory: "What Gyrus remembers", the d3 graph drawn in app.js.            */
+/*   Memory: "What Gyrus remembers", the d3 graph drawn in app.js. Opened    */
+/*   from the rail.                                                           */
 /*   Node type is shown by shape and weight in text colours; the accent       */
 /*   marks only the node the user selected.                                   */
 /* -------------------------------------------------------------------------- */
@@ -114,11 +115,13 @@
   padding: var(--space-3) var(--space-5) var(--space-4);
 }
 
+/* One-line legend under the title: searches, topics, links. */
 .network-legend {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--space-1) var(--space-2);
+  margin: 0;
   font-size: var(--font-size-sm);
   color: var(--color-ink-muted);
 }

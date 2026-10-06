@@ -9,25 +9,21 @@
   --space-6: 2rem;     /* 32 */
   --space-7: 3rem;     /* 48 */
 
-  /* Sizes (not spacing). app.js uses the header and sidebar numbers too. */
-  --header-element-height: 48px;
-  --header-element-content-height: 32px;   /* header controls: 48 - 2 x 8 */
-  --sidebar-width: 200px;
-  --row-height: 44px;                      /* every task and tab row */
+  /* Sizes (not spacing). */
+  --header-element-height: 48px;           /* top bar, rail head */
+  --header-element-content-height: 32px;   /* top bar controls: 48 - 2 x 8 */
+  --rail-width: 232px;
+  --rail-width-collapsed: 64px;            /* narrow windows: icons only */
+  --row-height: 44px;                      /* every list row */
   --icon-button-size: 32px;
   --button-height: 44px;                   /* primary buttons */
   --icon-button-size-sm: 24px;
   --icon-size: 16px;
-  --page-status-height: 32px;
-  --edge-tab-width: 24px;
   --hero-size: 96px;
-  --edge-tab-height: 72px;
-  --edge-hover-zone: 5px;                  /* app.js EDGE_PX */
 
   /* Content widths. */
-  --width-measure: 40rem;                  /* query box, intro, preview card */
-  --width-wide: 56rem;                     /* editor mode, memory modal */
-  --width-menu: 14rem;
-  --height-editor: 15rem;
+  --width-measure: 40rem;                  /* start screen, run, task view, reader */
+  --width-wide: 56rem;                     /* memory modal */
+  --width-menu: 18rem;                     /* "Not right?" chooser */
   --height-list-max: 18rem;                /* suggestion lists */
 }

@@ -1,157 +1,113 @@
-/* Layout: header on top, then [left sidebar | content area | right sidebar].
-   Header and both sidebars are hidden until the pointer reaches an edge
-   (app.js setupHeaderVisibility). The open page is position:fixed and
-   placed by app.js updateWebviewPosition so it never sits under a panel. */
-.app-header {
-  position: relative;
+/* Layout: [rail | main]. The rail is always there (icons only on narrow
+   windows). Main is the top bar plus a stage that shows one view at a time;
+   app.js sets body[data-view] to start | run | task | page. */
+.app {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
   width: 100%;
+  height: 100vh;
+  min-height: 0;
+}
+
+.app__rail {
+  flex: 0 0 auto;
+  display: flex;
+}
+
+.app__main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Top bar: only what applies. Back / forward / address while a page is open;
+   in Electron it is also the window's drag area and holds the Windows/Linux
+   window buttons, so it stays. In a plain browser with no page it is gone. */
+.topbar {
+  position: relative;
+  flex: 0 0 auto;
+  display: none;
+  align-items: center;
+  gap: var(--space-2);
   height: var(--header-element-height);
   padding: 0 var(--space-4);
-  overflow: hidden;
   background-color: var(--color-elevated);
   border-bottom: var(--border-hairline);
-  opacity: 1;
-  transition:
-    height var(--duration-panel) var(--ease-panel),
-    opacity var(--duration-panel) var(--ease-panel);
-}
-
-.app-header:not(.is-visible) {
-  height: 0;
-  opacity: 0;
-  border-bottom-width: 0;
-}
-
-/* Transparent button under the header content so the window can be dragged. */
-.header-drag-button {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: var(--space-7); /* leave the macOS window buttons clickable */
-  z-index: 0;
-  background: transparent;
-  border: none;
-  outline: none;
-  cursor: default;
   -webkit-app-region: drag;
 }
 
-.app-header > *:not(.header-drag-button) {
-  position: relative;
-  z-index: 1;
+body[data-view="page"] .topbar,
+.in-electron .topbar {
+  display: flex;
+}
+
+/* Electron with no page open: the bar is only a drag strip, so it blends in. */
+.in-electron body:not([data-view="page"]) .topbar {
+  background-color: transparent;
+  border-bottom-color: transparent;
+}
+
+.topbar > * {
   -webkit-app-region: no-drag;
 }
 
-.main-container {
-  position: relative;
-  display: flex;
-  flex: 1;
-  width: 100%;
-  min-height: 0;
-  height: calc(100vh - var(--header-element-height));
-  overflow: hidden;
-  transition: height var(--duration-panel) var(--ease-panel);
+.topbar__nav,
+.topbar__address {
+  display: none;
 }
 
-.app-header:not(.is-visible) ~ .main-container {
-  height: 100vh;
+body[data-view="page"] .topbar__nav {
+  display: flex;
+  flex: 0 0 auto;
 }
 
-.content-area {
-  position: relative;
-  flex: 1;
+body[data-view="page"] .topbar__address {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.topbar__window {
+  margin-left: auto;
+  display: flex;
+}
+
+/* The stage: one view at a time. */
+.stage {
+  position: relative;
+  flex: 1 1 auto;
   min-height: 0;
-  padding: 0;
-  overflow: hidden;
   background-color: var(--color-ground);
 }
 
-.content-area.has-active-webview {
-  justify-content: flex-start;
-  align-items: stretch;
+.view {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
 }
 
-/* The page layer is hidden until a page is open. */
-.webview-container {
+.view[hidden] {
   display: none;
 }
 
-.content-area.has-active-webview #webview-container .webview-container {
+/* The page view is never display:none (Electron's <webview> would lose its
+   page); it is just out of sight unless it is the current view. */
+.view--page {
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+body[data-view="page"] .view--page {
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* Shown only in demo mode (api.js puts .is-demo on <html>). */
+.demo-only {
+  display: none;
+}
+
+.is-demo .demo-only {
   display: block;
-}
-
-/* Query box + intro, centred. When a page is open only the collapsed
-   "Search" button (position:fixed) remains, so this wrapper takes no space. */
-#query-input-container {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-4);
-  padding: 0 var(--space-4);
-  pointer-events: none;
-}
-
-#query-input-container > * {
-  pointer-events: auto;
-}
-
-.content-area.has-active-webview #query-input-container {
-  position: absolute;
-  width: 0;
-  height: 0;
-  padding: 0;
-  overflow: visible;
-}
-
-.content-area.has-active-webview .query-intro,
-.content-area.has-active-webview .query-hero {
-  display: none;
-}
-
-.is-hidden {
-  height: 0 !important;
-  opacity: 0 !important;
-  pointer-events: none;
-}
-
-/* Thin strips along the edges that catch the pointer above the page layer. */
-.hover-detection-zone {
-  position: absolute;
-  z-index: 100;
-  pointer-events: auto;
-}
-
-.hover-detection-zone--top {
-  top: 0;
-  left: 0;
-  right: 0;
-  height: var(--edge-hover-zone);
-}
-
-.hover-detection-zone--left {
-  top: 0;
-  left: 0;
-  bottom: 0;
-  width: var(--edge-hover-zone);
-}
-
-.hover-detection-zone--right {
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: var(--edge-hover-zone);
-}
-
-.app-header.is-visible ~ .main-container .content-area .hover-detection-zone--top {
-  height: var(--header-element-height);
 }

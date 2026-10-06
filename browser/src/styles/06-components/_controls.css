@@ -92,7 +92,7 @@
   pointer-events: none;
 }
 
-/* Floating surfaces (menu, modal, suggestions, preview, toast): card + shadow. */
+/* Floating surfaces (chooser, modal, suggestions): card + shadow. */
 .panel {
   background-color: var(--color-surface);
   border-radius: var(--radius-card);
@@ -107,7 +107,7 @@
   overflow: hidden;
 }
 
-/* Row: every list item (tasks, tabs, suggestions, menu items). Same height,
+/* Row: every list item (tasks, suggestions, chooser options). Same height,
    padding, hover and selected state. Separators are inset, iOS style: they
    start after the icon (or the left padding) and stop at the edge. */
 .row {
@@ -150,7 +150,7 @@
   background-color: var(--color-fill);
 }
 
-/* Selected task or tab: accent wash and an accent bar on the leading edge. */
+/* Selected task or option: accent wash and an accent bar on the leading edge. */
 .row.is-active {
   background-color: var(--color-accent-wash);
 }

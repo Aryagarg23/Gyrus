@@ -5,7 +5,11 @@
       <div class="network-modal__heading">
         <span class="label">Memory</span>
         <h2 class="network-modal__title" id="network-modal-title">What Gyrus remembers</h2>
-        <p class="network-modal__subtitle">Searches, the topics they belong to, and the links you opened.</p>
+        <p class="network-legend" id="network-graph-legend">
+          <span class="network-legend__item"><svg viewBox="0 0 12 12" aria-hidden="true"><circle class="graph-node--query" cx="6" cy="6" r="4.5"/></svg>Searches</span>
+          <span class="network-legend__item"><svg viewBox="0 0 12 12" aria-hidden="true"><rect class="graph-node--concept" x="1" y="1" width="10" height="10"/></svg>the topics they belong to</span>
+          <span class="network-legend__item"><svg viewBox="0 0 12 12" aria-hidden="true"><circle class="graph-node--link" cx="6" cy="6" r="3"/></svg>and the links you opened.</span>
+        </p>
       </div>
       <button class="icon-button icon-button--sm network-modal__close" type="button" title="Close" aria-label="Close">
         <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>
@@ -16,12 +20,7 @@
         <div class="network-graph__container" id="network-graph"></div>
       </div>
       <div class="network-actions">
-        <div class="network-legend" id="network-graph-legend">
-          <span class="network-legend__item"><svg viewBox="0 0 12 12" aria-hidden="true"><rect class="graph-node--concept" x="1" y="1" width="10" height="10"/></svg>Topic</span>
-          <span class="network-legend__item"><svg viewBox="0 0 12 12" aria-hidden="true"><circle class="graph-node--query" cx="6" cy="6" r="4.5"/></svg>Search</span>
-          <span class="network-legend__item"><svg viewBox="0 0 12 12" aria-hidden="true"><circle class="graph-node--link" cx="6" cy="6" r="3"/></svg>Link</span>
-          <span class="network-legend__hint">Drag to move. Scroll to zoom. Click an item to highlight it.</span>
-        </div>
+        <span class="network-actions__hint caption">Every search adds to this. Drag to move, scroll to zoom, click an item to highlight it.</span>
         <button class="network-action__button button button--text" id="refresh-network" type="button">Refresh</button>
       </div>
     </div>

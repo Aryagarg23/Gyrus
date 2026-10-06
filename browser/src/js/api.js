@@ -3,7 +3,7 @@
 // searchQuery(query), addLinks(payload), getGraph() first try the real Flask API
 // on http://127.0.0.1:5000 with the same request shapes app.js always used. If the
 // backend is not there, or a call fails, they fall back to a local demo
-// implementation and set window.GYRUS_DEMO = true. With the real backend, a
+// implementation (a small fake, see "Demo crews") and set window.GYRUS_DEMO = true. With the real backend, a
 // search is /api/search then /api/new-query (query + intent), so the memory
 // graph gets its Concept nodes; demo mode records the same shape locally.
 //
@@ -18,7 +18,8 @@
   const STORAGE_KEY = 'gyrus.demoGraph.v1';
 
   // ---------------------------------------------------------------------------
-  // Mode tracking + indicator hook
+  // Mode tracking. Demo mode puts `is-demo` on <html>; the start screen and task
+  // view show their one-line demo note from that (styles: .demo-only).
   // ---------------------------------------------------------------------------
   window.GYRUS_DEMO = false;
   const listeners = [];
@@ -26,35 +27,10 @@
   function setDemo(on) {
     const changed = window.GYRUS_DEMO !== on;
     window.GYRUS_DEMO = on;
-    renderIndicator();
+    document.documentElement.classList.toggle('is-demo', on);
     if (!changed) return;
     listeners.forEach((fn) => { try { fn(on); } catch (e) { console.error(e); } });
     window.dispatchEvent(new CustomEvent('gyrus:mode', { detail: { demo: on } }));
-  }
-
-  // Bottom-left note; styles in styles/06-components/_demo-indicator.css.
-  function renderIndicator() {
-    if (!document.body) return;
-    let el = document.getElementById('gyrus-demo-indicator');
-    if (!window.GYRUS_DEMO) {
-      if (el) el.hidden = true;
-      return;
-    }
-    if (!el) {
-      el = document.createElement('div');
-      el.id = 'gyrus-demo-indicator';
-      el.className = 'demo-indicator';
-      el.setAttribute('role', 'status');
-      const label = document.createElement('span');
-      label.className = 'label';
-      label.textContent = 'Demo mode.';
-      el.append(label, ' Crews return search links.');
-      el.title = 'No backend is running, so the crews return search links instead of results.';
-      document.body.appendChild(el);
-    }
-    el.hidden = false;
-    // The start screen says this inside its intro; the corner pill is for when pages are open.
-    document.documentElement.classList.add('is-demo');
   }
 
   // ---------------------------------------------------------------------------
@@ -99,13 +75,13 @@
     return res.json();
   }
 
-  async function withFallback(name, real, demo) {
+  async function withFallback(real, demo) {
     try {
       const data = await real();
       setDemo(false);
       return data;
-    } catch (err) {
-      console.warn(`[api] ${name}: real backend unavailable (${err.message}); using demo`);
+    } catch (_) {
+      // No backend (or it failed): answer locally. Not an error in demo mode.
       setDemo(true);
       return demo();
     }
@@ -140,6 +116,8 @@
       /\blog ?in\b/, /\bsign in\b/, /\bhomepage\b/, /\bwebsite\b/, /\bgo to\b/, /^open /]],
   ];
 
+  const INTENT_NAMES = ['Research', 'News', 'Transactional', 'Navigational', 'Answer'];
+
   function classifyIntent(query) {
     const q = String(query || '').toLowerCase();
     let best = 'Answer';
@@ -155,26 +133,103 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Demo crew links: real search URLs for the sources the crews use. No invented
-  // titles, authors or results. Exa (no public search page found) and NewsAPI
-  // (no public UI) are skipped.
+  // Demo crews: a small fake, not a search. No web request is made. Each source
+  // is a local stand-in page (demo-page.html) whose title says "(example)", so
+  // nothing here can be mistaken for a real paper or article: no authors, DOIs,
+  // journals or numbers. The three start-screen examples have canned crews;
+  // any other query gets generic stand-ins built from its own words.
+  //
+  // The step lines name the real crews in backend/MCP: the research crew is a
+  // Query Enhancer and a Learning Router (researchcrew.py), the news crew a
+  // News Router and a News Explainer (newscrew_http.py).
   // ---------------------------------------------------------------------------
-  function demoCrewLinks(query, intent) {
-    const q = encodeURIComponent(query);
-    const crew = intent === 'Research' ? 'research' : 'news';
-    const note = (source) =>
-      `A live ${source} search for this query. This is a demo stand-in: with the ` +
-      `backend running, the ${crew} crew reads the results and picks the links itself.`;
+  function demoPageUrl(params) {
+    const url = new URL('demo-page.html', location.href);
+    Object.entries(params).forEach(([k, v]) => { if (v) url.searchParams.set(k, String(v)); });
+    return url.href;
+  }
+
+  const CANNED = {
+    'why do we procrastinate': {
+      rewrite: 'psychology of procrastination: mood, task aversion and present bias',
+      sources: [
+        ['Procrastination as mood repair: an overview (example)', 'Semantic Scholar', 'Explains the main idea: putting a task off makes you feel better now.'],
+        ['Task aversion and delay: why some tasks feel harder (example)', 'Semantic Scholar', 'Covers which kinds of tasks people put off most.'],
+        ['Present bias and the planning gap (example)', 'arXiv', 'A modelling angle on why later always looks easier.'],
+        ['Ways to reduce procrastination: a survey of approaches (example)', 'arXiv', 'Moves from why it happens to what helps.'],
+      ],
+    },
+    'latest on neuromorphic chips': {
+      sources: [
+        ['Neuromorphic chips: where the field stands this year (example)', 'NewsAPI', 'A recent roundup, good for the big picture.'],
+        ['A new low-power chip design, explained (example)', 'NewsAPI', 'Covers the latest announcement in plain terms.'],
+        ['Coverage of neuromorphic computing over time (example)', 'GDELT', 'Shows when the topic has been in the news.'],
+      ],
+    },
+  };
+
+  function cannedFor(query) {
+    const key = String(query || '').toLowerCase().replace(/[?.!]+$/, '').replace(/\s+/g, ' ').trim();
+    return CANNED[key] || null;
+  }
+
+  // The topic inside a query, for generic stand-in titles: "latest news on
+  // fusion power" -> "Fusion power". Drops a leading intent phrase and the end
+  // punctuation; falls back to the query as typed.
+  function topicOf(query) {
+    const raw = String(query || '').trim().replace(/[?.!]+$/, '');
+    const topic = raw
+      .replace(/^(what('s| is) )?(the )?(latest|recent|breaking|today'?s?)( news)?( on| about| in)?\s+/i, '')
+      .replace(/^news( on| about| in)?\s+/i, '')
+      .replace(/^(why|how) (do|does|did|is|are|can)\s+/i, '')
+      .replace(/^(what|who) (is|are|was|were)\s+/i, '')
+      .replace(/^(buy|order|cheapest|cheap|best)( a| an| the)?\s+/i, '')
+      .replace(/(\s+(news|today|this week))+$/i, '')
+      .trim() || raw;
+    return topic.charAt(0).toUpperCase() + topic.slice(1);
+  }
+
+  function genericSources(query, intent) {
+    const q = topicOf(query);
     if (intent === 'Research') {
       return [
-        { title: `arXiv: search for ${query}`, link: `https://arxiv.org/search/?query=${q}&searchtype=all`, snippet: note('arXiv') },
-        { title: `Semantic Scholar: search for ${query}`, link: `https://www.semanticscholar.org/search?q=${q}`, snippet: note('Semantic Scholar') },
+        [`${q}: an introduction (example)`, 'Semantic Scholar', 'A starting point that lays out the basics.'],
+        [`${q}: key ideas and evidence (example)`, 'Semantic Scholar', 'Goes one level deeper than the introduction.'],
+        [`${q}: open questions (example)`, 'arXiv', 'Shows what is still argued about.'],
+        [`${q}: a short history (example)`, 'arXiv', 'Explains how the current view came about.'],
       ];
     }
     return [
-      { title: `GDELT: article list for ${query}`, link: `https://api.gdeltproject.org/api/v2/doc/doc?query=${q}&mode=artlist&format=html`, snippet: note('GDELT') },
-      { title: `Google News: search for ${query}`, link: `https://news.google.com/search?q=${q}`, snippet: note('Google News') },
+      [`${q}: what happened this week (example)`, 'NewsAPI', 'The most recent story on this.'],
+      [`${q}: background to the story (example)`, 'NewsAPI', 'Fills in what you need to follow the news.'],
+      [`${q}: coverage over time (example)`, 'GDELT', 'Shows when this has been in the news.'],
     ];
+  }
+
+  function demoCrew(query, intent) {
+    const canned = cannedFor(query);
+    const rows = (canned && canned.sources) || genericSources(query, intent);
+    const kind = intent === 'Research' ? 'research' : 'news';
+    const links = rows.map(([title, source, why]) => ({
+      title,
+      link: demoPageUrl({ kind, title, source, why }),
+      snippet: why,
+      source,
+      why,
+    }));
+    const count = `Collected ${links.length} sources`;
+    const steps = intent === 'Research'
+      ? [
+        `Query enhancer: rewrote your search as "${(canned && canned.rewrite) || `${topicOf(query).toLowerCase()}: key ideas, evidence and open questions`}"`,
+        'Learning router: picked arXiv and Semantic Scholar',
+        count,
+      ]
+      : [
+        'News router: picked NewsAPI and GDELT',
+        'News explainer: put the stories in date order',
+        count,
+      ];
+    return { links, steps };
   }
 
   // ---------------------------------------------------------------------------
@@ -252,13 +307,14 @@
         body: JSON.stringify({ query, intent }),
       }, 60000);
     } catch (err) {
-      console.warn(`[api] new-query failed (${err.message}); the search still worked`);
+      console.error(`[api] new-query failed (${err.message}); the search still worked`);
     }
   }
 
-  async function searchQuery(query) {
+  // options.intent (demo only): run as this intent instead of classifying.
+  // The real backend classifies for itself and takes no such option.
+  async function searchQuery(query, options = {}) {
     return withFallback(
-      'search',
       async () => {
         const data = await callReal('/api/search', { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ query }) }, 180000);
         await recordNewQuery(query, (data && data.intent) || 'Answer');
@@ -266,19 +322,19 @@
       },
       () => {
         // Same shape as backend/src/app.py /api/search.
-        const intent = classifyIntent(query);
+        const intent = INTENT_NAMES.includes(options.intent) ? options.intent : classifyIntent(query);
         recordSearch(query);
         if (intent === 'Research' || intent === 'News') {
-          return { links: demoCrewLinks(query, intent), intent };
+          const crew = demoCrew(query, intent);
+          return { links: crew.links, intent, steps: crew.steps, demo: true };
         }
-        return { query, intent };
+        return { query, intent, demo: true };
       }
     );
   }
 
   async function addLinks(payload) {
     return withFallback(
-      'add-links',
       () => callReal('/api/add-links', { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(payload) }, 15000),
       () => {
         const text = String((payload && payload.query) || '').trim();
@@ -296,7 +352,6 @@
 
   async function getGraph() {
     return withFallback(
-      'get-graph',
       () => callReal('/api/get-graph', { method: 'GET', headers: JSON_HEADERS }, 15000),
       // Deep copy: d3.forceLink replaces source/target ids with node objects.
       () => JSON.parse(JSON.stringify(graph))
@@ -308,11 +363,12 @@
     addLinks,
     getGraph,
     classifyIntent,
+    demoPageUrl,
     isDemo: () => window.GYRUS_DEMO,
     onModeChange: (fn) => { if (typeof fn === 'function') listeners.push(fn); },
   };
 
-  // Probe once at startup so the indicator shows before the first search.
+  // Probe once at startup so the demo note shows before the first search.
   const startupProbe = () => backendReachable().then((ok) => setDemo(!ok));
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', startupProbe);

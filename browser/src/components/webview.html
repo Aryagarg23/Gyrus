@@ -1,7 +1,20 @@
-<div class="webview-container">
-  <div class="page-status caption" hidden>
-    <span class="page-status__text"></span>
+<div class="page">
+  <div class="page__bar">
+    <button class="page__back button button--text" type="button">
+      <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3L5 8l5 5"/></svg>
+      <span class="page__back-label">Back to sources</span>
+    </button>
+    <div class="page__about">
+      <span class="page__title"></span>
+      <span class="page__origin caption"></span>
+    </div>
+    <div class="page__actions">
+      <button class="page__intent button button--text" type="button" hidden>Not right?</button>
+      <a class="page__open button button--text" target="_blank" rel="noopener noreferrer" hidden>Open in a new tab</a>
+      <span class="webview-loading caption" role="status" hidden>Loading</span>
+    </div>
   </div>
-  <webview id="browser-webview" src="about:blank" class="browser-webview"></webview>
-  <div class="webview-loading caption" role="status">Loading</div>
+  <div class="page__frame">
+    <webview id="browser-webview" src="about:blank" class="browser-webview"></webview>
+  </div>
 </div>

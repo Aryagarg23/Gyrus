@@ -1,0 +1,177 @@
+/* -------------------------------------------------------------------------- */
+/*   06-components/_rail.css: the persistent left rail.                       */
+/*   New search on top, the task list (General + one row per task) in a      */
+/*   .card of .rows, Memory and About at the bottom. Below 760px it shows    */
+/*   icons only; it is never hidden.                                          */
+/* -------------------------------------------------------------------------- */
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: var(--rail-width);
+  height: 100%;
+  padding: 0 var(--space-3) var(--space-3);
+  overflow-y: auto;
+  background-color: var(--color-elevated);
+  border-right: var(--border-hairline);
+}
+
+/* Top strip, level with the top bar. In Electron it is a drag area and, on
+   macOS, holds the traffic lights. */
+.rail__head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  min-height: var(--space-3);
+  -webkit-app-region: drag;
+}
+
+.in-electron .rail__head {
+  min-height: var(--header-element-height);
+}
+
+.rail__head > * {
+  -webkit-app-region: no-drag;
+}
+
+.rail__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: var(--icon-size);
+  height: var(--icon-size);
+}
+
+/* New search and Memory: rows outside a card, accent icon. */
+.rail__new,
+.rail__memory {
+  border-radius: var(--radius-button);
+  padding-left: var(--space-3);
+  padding-right: var(--space-3);
+  font-weight: var(--font-weight-semibold);
+}
+
+.rail__new::after,
+.rail__memory::after {
+  display: none;
+}
+
+.rail__new .rail__icon,
+.rail__memory .rail__icon {
+  color: var(--color-accent);
+}
+
+.rail__new.is-active,
+.rail__memory.is-active {
+  background-color: var(--color-accent-wash);
+}
+
+.rail__new.is-active::before,
+.rail__memory.is-active::before {
+  display: none;
+}
+
+.rail__label {
+  margin: var(--space-3) 0 0;
+  padding: 0 var(--space-3);
+}
+
+.rail__tasks {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.rail__task {
+  --row-inset: calc(var(--space-4) + var(--icon-size) + var(--space-3));
+}
+
+.rail__task .rail__icon {
+  color: var(--color-ink-muted);
+}
+
+.rail__task.is-active .rail__icon {
+  color: var(--color-accent);
+}
+
+.rail__foot {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-top: var(--space-3);
+}
+
+/* About: a small, quiet link-style button. */
+.rail__about {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  align-self: flex-start;
+  min-height: var(--icon-button-size);
+  padding: 0 var(--space-3);
+  border: none;
+  border-radius: var(--radius-button);
+  background: transparent;
+  color: var(--color-ink-muted);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: background-color var(--duration-hover) var(--ease-hover);
+}
+
+.rail__about:hover {
+  background-color: var(--color-fill);
+}
+
+/* Narrow windows: icons only. Titles stay available as tooltips and to
+   screen readers (row title attributes, aria labels). */
+@media (max-width: 760px) {
+  .rail {
+    width: var(--rail-width-collapsed);
+    padding-left: var(--space-2);
+    padding-right: var(--space-2);
+    align-items: stretch;
+  }
+
+  .rail .rail__text,
+  .rail .row__text,
+  .rail .row__count,
+  .rail .row__close,
+  .rail__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .rail .row,
+  .rail__about {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .rail__about {
+    align-self: stretch;
+  }
+
+  .rail__tasks {
+    margin-top: var(--space-2);
+  }
+
+  .rail__task::after {
+    display: none;
+  }
+
+  /* macOS traffic lights stack in the narrow head. */
+  .rail__head .window-controls {
+    padding: 0 var(--space-1);
+    gap: var(--space-1);
+  }
+}

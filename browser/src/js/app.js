@@ -1,11 +1,18 @@
-// Main application logic
+// Main application logic.
+//
+// Layout: a persistent left rail (New search, Tasks, Memory, About) and a main
+// area that shows one of four views (body[data-view]):
+//   start  the empty state: what Gyrus is, a search box, three examples
+//   run    a search happening: the intent guess, then the crew's steps
+//   task   a task: its intent, what the crew did, and its reading list
+//   page   one open page, with a bar leading back to the list it came from
+//
+// A search goes to js/api.js (the real backend, or the demo fake). Research
+// and News results become a task with one source per link; everything else
+// is a normal page in the permanent General task.
 
-// Panel sizes. Keep in step with --header-element-height and --sidebar-width
-// in styles/01-settings/_spacing.css.
-const HEADER_HEIGHT_PX = 48;
-const SIDEBAR_WIDTH_PX = 200;
-
-// "@name words" shortcuts, shared by the query box and the tabs panel input.
+// "@name words" shortcuts in the search box. Kept, not advertised: they only
+// show when you type "@".
 const SEARCH_ENGINES = [
   { name: 'google', description: 'Search Google' },
   { name: 'bing', description: 'Search Bing' },
@@ -54,23 +61,54 @@ const ENGINE_URLS = {
 };
 
 const AT_COMMANDS = [
-  { name: 'duplicate', description: 'Copy a tab' },
-  { name: 'close', description: 'Close this tab' },
-  { name: 'closeall', description: 'Close every tab in this task' },
+  { name: 'duplicate', description: 'Copy a page' },
+  { name: 'close', description: 'Close this page' },
+  { name: 'closeall', description: 'Close every page in this task' },
   { name: 'newtask', description: 'Start an empty task' },
   { name: 'closetask', description: 'Close this task' }
 ];
 
-// Plain names for the five intents the classifier returns.
-const INTENT_NAMES = {
-  Research: 'Research',
-  News: 'News',
-  Answer: 'Answer',
-  Navigational: 'Finding a site',
-  Transactional: 'Buying something'
+// The five intents the classifier returns (backend/src/fivedvector.py), with
+// the plain name and meaning a newcomer sees. Only Research and News send a crew.
+const INTENTS = {
+  Research: { name: 'Research', meaning: 'Understanding a topic in depth.', crew: 'research crew' },
+  News: { name: 'News', meaning: "What's happening now.", crew: 'news crew' },
+  Answer: { name: 'Answer', meaning: 'One quick fact.' },
+  Transactional: { name: 'Shopping', meaning: 'Buying something.' },
+  Navigational: { name: 'Site', meaning: 'Going to a specific site.' }
+};
+const INTENT_ORDER = ['Research', 'News', 'Answer', 'Transactional', 'Navigational'];
+
+const NO_CREW_LINES = {
+  Answer: 'This looks like a quick fact. Gyrus leaves these to a normal search and does not send a crew.',
+  Transactional: 'This looks like shopping. Gyrus leaves these to a normal search and does not send a crew.',
+  Navigational: 'This looks like a specific site. Gyrus leaves these to a normal search and does not send a crew.'
 };
 
+// With the real backend the crews don't report their steps, so these say what
+// each crew is built to do (backend/MCP/researchcrew.py, newscrew_http.py).
+// The demo fake supplies its own, more specific steps.
+function defaultSteps(intent, count) {
+  const collected = `Collected ${count} ${count === 1 ? 'source' : 'sources'}`;
+  if (intent === 'Research') {
+    return [
+      'Query enhancer: rewrote your search to be clearer',
+      'Learning router: chose from Exa, arXiv and Semantic Scholar',
+      collected
+    ];
+  }
+  return [
+    'News router: chose from NewsAPI, GDELT and Exa',
+    'News explainer: wrote a dated note for each story',
+    collected
+  ];
+}
+
+// The run screen: about 2.5 s in all, skippable (Skip button or Esc).
+const RUN_TIMING = { think: 500, intent: 900, step: 600, open: 500, still: 1500 };
+
 const LOBOTOMY_TITLE = 'Self-lobotomy';
+const LOBOTOMY_ORIGIN = 'You asked for an AI chat site';
 
 // Real chat products. A URL matches when its hostname is one of these or a
 // subdomain of one. Company homepages (openai.com, anthropic.com) are not chat
@@ -96,8 +134,8 @@ const LLM_CHAT_DOMAINS = [
   'peppertype.ai'
 ];
 
-// A query that is exactly one of these also counts. Generic words from the old
-// list ("copy", "character", "simplified") are left out: they are real searches.
+// A query that is exactly one of these also counts. Generic words ("copy",
+// "character", "simplified") are left out: they are real searches.
 const LLM_CHAT_NAMES = new Set([
   'chatgpt', 'chat gpt', 'openai', 'claude', 'anthropic', 'gemini', 'bard',
   'copilot', 'perplexity', 'poe', 'replika', 'jasper', 'writesonic', 'rytr',
@@ -105,7 +143,15 @@ const LLM_CHAT_NAMES = new Set([
 ]);
 
 // Line icons: 16px, 2px round stroke, currentColor (see .icon in _controls.css).
-const ICON_CLOSE = '<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>';
+const svgIcon = (paths) => `<svg class="icon" viewBox="0 0 16 16" aria-hidden="true">${paths}</svg>`;
+const ICONS = {
+  close: svgIcon('<path d="M4 4l8 8M12 4l-8 8"/>'),
+  check: svgIcon('<path d="M3.5 8.5l3 3 6-7"/>'),
+  general: svgIcon('<circle cx="8" cy="8" r="5.5"/><path d="M2.5 8h11M8 2.5c1.7 1.6 2.5 3.4 2.5 5.5S9.7 11.9 8 13.5M8 2.5C6.3 4.1 5.5 5.9 5.5 8s.8 3.9 2.5 5.5"/>'),
+  Research: svgIcon('<path d="M2.5 3.5h4A1.5 1.5 0 0 1 8 5v8.5A1.5 1.5 0 0 0 6.5 12h-4zM13.5 3.5h-4A1.5 1.5 0 0 0 8 5v8.5A1.5 1.5 0 0 1 9.5 12h4z"/>'),
+  News: svgIcon('<rect x="2.5" y="3" width="11" height="10" rx="1.5"/><path d="M5 6h6M5 8.5h6M5 11h3.5"/>'),
+  task: svgIcon('<rect x="3" y="2.5" width="10" height="11" rx="1.5"/><path d="M5.5 6h5M5.5 8.5h5"/>')
+};
 
 function escapeHtml(text) {
   return String(text == null ? '' : text)
@@ -116,445 +162,272 @@ function escapeHtml(text) {
     .replace(/'/g, '&#39;');
 }
 
+const uid = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const isDemo = () => !!window.GYRUS_DEMO;
+
+function hostOf(url) {
+  try { return new URL(url).hostname.replace(/^www\./, ''); } catch (_) { return ''; }
+}
+
 class App {
   constructor() {
+    // The permanent General task: everyday searches (Answer, Shopping, Site),
+    // typed addresses and @-searches.
+    this.general = { id: 'general', title: 'General', isGeneral: true, tabs: [] };
     this.tasks = [];
-    this.activeTaskIndex = 0;
-    this.activeTabIndex = 0;
-    this.hasActiveWebview = false;
+    this.activeTask = null;   // the task shown in the task or page view
+    this.activeTab = null;    // the page shown in the page view
+    this.view = 'start';
+    this.run = null;          // the search currently on the run screen
 
-    // The permanent General task holds Navigational, Transactional and Answer
-    // searches, typed addresses and @-searches.
-    this.generalTask = {
-      id: 'general-permanent',
-      title: 'General',
-      intent: null,
-      tabs: [],
-      createdAt: new Date(),
-      isGeneralTask: true
+    this.el = {
+      rail: document.querySelector('.rail'),
+      railTasks: document.querySelector('.rail__tasks'),
+      start: document.getElementById('start-container'),
+      searchForm: document.querySelector('.search'),
+      searchInput: document.querySelector('.search__input'),
+      runView: document.getElementById('run-view'),
+      taskView: document.getElementById('task-view'),
+      pageView: document.getElementById('webview-container'),
+      urlBar: document.querySelector('.url-bar__input'),
+      webview: document.getElementById('browser-webview'),
+      modal: document.getElementById('network-modal')
     };
 
-    this.isGeneralTaskActive = true;
-
-    // Last search, sent with add-links calls.
-    this.currentQuery = null;
-    this.currentIntent = null;
-
-    // The preview card (plain browser) asks us what we know about a URL.
-    if (window.GyrusPlatform) {
-      window.GyrusPlatform.describeUrl = (url) => this.describeUrl(url);
-    }
-
-    this.initializeEventListeners();
-    this.waitForComponents();
-  }
-
-  // Whichever task is showing: General or a regular one.
-  get activeTask() {
-    return this.isGeneralTaskActive ? this.generalTask : this.tasks[this.activeTaskIndex];
-  }
-
-  // Tabs of whichever task is active (General or a regular task). Tabs live under
-  // tasks; setupWebview's handlers read this.tabs, which was never defined.
-  get tabs() {
-    const task = this.activeTask;
-    return task ? task.tabs : [];
-  }
-
-  // Every task's tabs, General first.
-  allTabs() {
-    return [this.generalTask, ...this.tasks].flatMap((task) => task.tabs);
-  }
-
-  // For the plain-browser preview card (js/platform.js).
-  describeUrl(url) {
-    const tab = this.tabs.find((t) => t.url === url) || this.allTabs().find((t) => t.url === url);
-    if (!tab) return null;
-    return { title: tab.title, snippet: tab.snippet, origin: tab.origin };
-  }
-
-  async waitForComponents() {
-    // Components are inserted before App starts; this is a safety net.
-    for (let attempt = 0; attempt < 50; attempt++) {
-      if (document.querySelector('.sidebar') && document.querySelector('.sidebar__add-tab')) {
-        this.initializeTasks();
-        this.setupTaskManagement();
-        return;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
-
-    console.error('Failed to load components after 5 seconds');
-    this.createFallbackTaskButton();
-  }
-
-  createFallbackTaskButton() {
-    const sidebarContainer = document.querySelector('#sidebar-container');
-    if (!sidebarContainer) return;
-    sidebarContainer.innerHTML = `
-      <div class="sidebar">
-        <div class="sidebar-background"></div>
-        <div class="sidebar__content">
-          <div class="sidebar__header">
-            <h3 class="sidebar__title label">Tasks</h3>
-            <button class="sidebar__add-tab" type="button" title="New search (Ctrl+T)" aria-label="New search">+</button>
-          </div>
-          <div class="sidebar__tab-list"></div>
-        </div>
-      </div>
-    `;
-    setTimeout(() => {
-      this.initializeTasks();
-      this.setupTaskManagement();
-    }, 100);
-  }
-
-  initializeEventListeners() {
-    this.setupWindowControls();
-    this.setupButtonActiveStates();
-    this.setupQueryInput();
-    this.setupMenuButton();
-    this.setupNetworkButton();
+    this.setupRail();
+    this.setupSearch();
     this.setupWebview();
-    this.setupHeaderVisibility();
+    this.setupPageBar();
+    this.setupMemory();
+    this.setupWindowControls();
+    this.setupKeyboard();
     this.preventZoomFunctionality();
-    this.setupCollapsedQueryInput();
+
+    this.renderRail();
+    this.setView('start');
+    this.el.searchInput?.focus();
   }
 
-  initializeTasks() {
-    // Start with no tasks. General is always there.
-    this.isGeneralTaskActive = true;
-    this.renderTasks();
-    this.renderTabs();
+  // ---------------------------------------------------------------------------
+  // Views
+  // ---------------------------------------------------------------------------
+
+  setView(view) {
+    this.view = view;
+    document.body.dataset.view = view;
+    this.el.start.hidden = view !== 'start';
+    this.el.runView.hidden = view !== 'run';
+    this.el.taskView.hidden = view !== 'task';
+    // The page view is never display:none, so Electron's <webview> keeps its
+    // page; CSS hides it unless body[data-view="page"].
+    this.el.pageView.setAttribute('aria-hidden', view === 'page' ? 'false' : 'true');
+    this.renderRail();
   }
 
-  setupTaskManagement() {
-    // Delegated, because the task list is re-rendered often.
-    document.addEventListener('click', (e) => {
-      if (e.target.closest('.sidebar__add-tab')) {
-        e.preventDefault();
-        e.stopPropagation();
-        this.openQueryInput();
-      }
-    });
-
-    document.addEventListener('keydown', (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 't') {
-        e.preventDefault();
-        this.openQueryInput();
-      }
-    });
+  openStart({ focus = true } = {}) {
+    this.cancelRun();
+    this.activeTask = null;
+    this.activeTab = null;
+    if (this.el.searchInput) this.el.searchInput.value = '';
+    this.setView('start');
+    if (focus) this.el.searchInput?.focus();
   }
 
-  // Back to the start page: the query box, focused.
-  openQueryInput() {
-    this.deactivateWebview();
-    const queryInputTextArea = document.querySelector('.query-input__text-area');
-    if (queryInputTextArea) {
-      setTimeout(() => queryInputTextArea.focus(), 100);
+  openTask(task) {
+    this.cancelRun();
+    this.activeTask = task;
+    this.activeTab = null;
+    this.renderTaskView();
+    this.setView('task');
+    this.el.taskView.querySelector('.task__title')?.focus({ preventScroll: true });
+  }
+
+  openTab(task, tab) {
+    this.cancelRun();
+    this.activeTask = task;
+    this.activeTab = tab;
+    const firstVisit = !tab.visited;
+    tab.visited = true;
+
+    if (this.el.webview) this.el.webview.src = tab.url;
+    if (this.el.urlBar) this.el.urlBar.value = tab.url;
+    this.renderPageBar();
+    this.setView('page');
+
+    // A crew source you open becomes a CLICKED link in the memory graph.
+    if (firstVisit && !task.isGeneral && task.query && tab.isSource) {
+      window.GyrusAPI.addLinks({ links: [tab.url], query: task.query, intent: task.intent })
+        .catch((error) => console.error('Error calling add-links API:', error));
     }
   }
 
-  createTask(title = 'New task', intent = null) {
+  // "Back to sources" / "Back to General".
+  backToList() {
+    if (this.activeTask) this.openTask(this.activeTask);
+    else this.openStart();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Tasks and pages
+  // ---------------------------------------------------------------------------
+
+  addTask({ query, intent, steps, sources = [], searchId = null, demo = false }) {
     const task = {
-      id: Date.now() + Math.random(),
-      title: title,
-      intent: intent,
-      tabs: [],
-      createdAt: new Date()
+      id: uid(),
+      title: query,
+      query,
+      intent,
+      steps: steps || [],
+      searchId,
+      demo,
+      tabs: sources.map((link) => this.newTab({
+        url: link.link,
+        title: link.title || hostOf(link.link) || 'Untitled source',
+        source: link.source || hostOf(link.link),
+        why: link.why || link.snippet || '',
+        isSource: true,
+        fixedTitle: true
+      }))
     };
-
     this.tasks.push(task);
-    this.renderTasks();
-    this.switchToTask(this.tasks.length - 1);
+    this.renderRail();
+    return task;
   }
 
-  newTab(url, title, snippet, origin) {
-    return {
-      id: Date.now() + Math.random(),
-      url: url,
-      title: title || 'New tab',
-      snippet: snippet || '',
-      origin: origin || '',
-      favicon: this.getFaviconUrl(url),
-      webview: null
-    };
+  newTab({ url, title, source = '', why = '', origin = '', isSource = false, fixedTitle = false, query = null, intent = null, searchId = null }) {
+    return { id: uid(), url, title: title || hostOf(url) || 'Page', source, why, origin, isSource, fixedTitle, query, intent, searchId, visited: false };
   }
 
-  // Adds a tab to the active regular task (creating one if needed).
-  // Pass { recordLink: false } when the caller sends links to the backend itself.
-  async createTab(url, title = 'New tab', snippet = '', origin = '', { recordLink = true } = {}) {
-    if (this.tasks.length === 0 || this.isGeneralTaskActive) {
-      this.createTask('New task');
-    }
-
-    const activeTask = this.tasks[this.activeTaskIndex];
-    if (!activeTask) return;
-
-    activeTask.tabs.push(this.newTab(url, title, snippet, origin));
-    this.renderTasks();
-    this.renderTabs();
-    this.switchToTab(activeTask.tabs.length - 1);
-
-    if (recordLink) {
-      await this.addLinksToBackend([url]);
-    }
+  addGeneralTab(fields) {
+    const tab = this.newTab(fields);
+    this.general.tabs.push(tab);
+    this.renderRail();
+    return tab;
   }
 
-  createTabInGeneralTask(url, title = 'New tab', snippet = '', origin = '') {
-    this.generalTask.tabs.push(this.newTab(url, title, snippet, origin));
-    this.renderTasks();
-    this.renderTabs();
-    this.switchToTab(this.generalTask.tabs.length - 1);
-  }
-
-  // One add-links call for any number of URLs (the API takes a list).
-  async addLinksToBackend(urls) {
-    // Only links that came from a search in a regular task are recorded.
-    if (!this.currentQuery || this.isGeneralTaskActive || !urls.length) return;
-
-    try {
-      await window.GyrusAPI.addLinks({
-        links: urls,
-        query: this.currentQuery,
-        intent: this.currentIntent
-      });
-    } catch (error) {
-      // Recording the click is optional; never break the UI over it.
-      console.error('Error calling add-links API:', error);
-    }
-  }
-
-  switchToGeneralTask() {
-    this.isGeneralTaskActive = true;
-    this.activeTabIndex = 0;
-
-    const webview = document.getElementById('browser-webview');
-    const first = this.generalTask.tabs[0];
-    if (webview) {
-      webview.src = first ? first.url : 'about:blank';
-    }
-
-    const urlBarInput = document.querySelector('.url-bar__input');
-    if (urlBarInput) {
-      urlBarInput.value = first ? first.url : '';
-    }
-
-    this.renderTasks();
-    this.renderTabs();
-  }
-
-  switchToTask(index) {
-    if (index < 0 || index >= this.tasks.length) return;
-
-    this.isGeneralTaskActive = false;
-    this.activeTaskIndex = index;
-    this.activeTabIndex = 0;
-
-    const activeTask = this.tasks[index];
-
-    if (activeTask.tabs.length > 0) {
-      this.switchToTab(0);
+  // Answer / Shopping / Site (or a crew that came back empty): a normal search
+  // in General. In demo mode this is a local stand-in page, never a real URL.
+  addGeneralSearch(query, intent, searchId, { crewFoundNothing = false, failed = false } = {}) {
+    const info = INTENTS[intent] || INTENTS.Answer;
+    let url;
+    if (isDemo()) {
+      const kind = { Transactional: 'shopping', Navigational: 'site' }[intent] || 'answer';
+      url = window.GyrusAPI.demoPageUrl(kind === 'site'
+        ? { kind, title: `${query} (example)` }
+        : { kind, q: query });
     } else {
-      const webview = document.getElementById('browser-webview');
-      if (webview) {
-        webview.src = 'about:blank';
-      }
-      const urlBarInput = document.querySelector('.url-bar__input');
-      if (urlBarInput) {
-        urlBarInput.value = '';
-      }
+      url = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
     }
-
-    this.renderTasks();
-    this.renderTabs();
+    let origin = `${info.name}: a normal search, no crew`;
+    if (crewFoundNothing) origin = `${info.name}: the crew found nothing, so this is a normal search`;
+    if (failed) origin = 'Something went wrong, so this is a normal search';
+    return this.addGeneralTab({
+      url,
+      title: query,
+      source: info.name,
+      why: origin,
+      origin,
+      fixedTitle: true,
+      query,
+      intent,
+      searchId
+    });
   }
 
-  switchToTab(index) {
-    const activeTask = this.activeTask;
-    if (!activeTask || index < 0 || index >= activeTask.tabs.length) return;
-
-    this.activeTabIndex = index;
-    const activeTab = activeTask.tabs[index];
-
-    const webview = document.getElementById('browser-webview');
-    if (webview) {
-      webview.src = activeTab.url;
+  // Undo what one search created (used when the intent is corrected).
+  removeSearch(searchId) {
+    if (!searchId) return;
+    this.tasks = this.tasks.filter((task) => task.searchId !== searchId);
+    this.general.tabs = this.general.tabs.filter((tab) => tab.searchId !== searchId);
+    if (this.activeTask && this.activeTask.searchId === searchId) {
+      this.activeTask = null;
+      this.activeTab = null;
     }
-
-    const urlBarInput = document.querySelector('.url-bar__input');
-    if (urlBarInput) {
-      urlBarInput.value = activeTab.url;
-    }
-
-    this.renderTabs();
+    this.renderRail();
   }
 
-  closeTask(index) {
-    // General is not in this.tasks, so it can't be closed here.
-    if (index < 0 || index >= this.tasks.length) return;
-
-    this.tasks.splice(index, 1);
-
-    if (this.tasks.length === 0) {
-      this.switchToGeneralTask();
-      this.showStartPageIfEmpty();
-      return;
-    }
-
-    if (this.activeTaskIndex >= index) {
-      this.activeTaskIndex = Math.max(0, this.activeTaskIndex - 1);
-    }
-
-    this.switchToTask(this.activeTaskIndex);
+  closeTask(task) {
+    if (!task || task.isGeneral) return;
+    this.tasks = this.tasks.filter((t) => t !== task);
+    this.renderRail();
+    if (this.activeTask === task) this.openStart();
   }
 
-  // Works for General and regular tasks. Closing the last tab of a task leaves
-  // it empty; if no tab is left anywhere, the start page comes back.
-  closeTab(index) {
-    const activeTask = this.activeTask;
-    if (!activeTask || index < 0 || index >= activeTask.tabs.length) return;
-
-    activeTask.tabs.splice(index, 1);
-
-    if (this.activeTabIndex > index || this.activeTabIndex >= activeTask.tabs.length) {
-      this.activeTabIndex = Math.max(0, this.activeTabIndex - 1);
-    }
-
-    this.renderTasks();
-
-    if (activeTask.tabs.length === 0) {
-      const webview = document.getElementById('browser-webview');
-      if (webview) webview.src = 'about:blank';
-      const urlBarInput = document.querySelector('.url-bar__input');
-      if (urlBarInput) urlBarInput.value = '';
-      this.activeTabIndex = 0;
-      this.renderTabs();
-      this.showStartPageIfEmpty();
-      return;
-    }
-
-    this.switchToTab(this.activeTabIndex);
-  }
-
-  showStartPageIfEmpty() {
-    if (this.allTabs().length === 0) {
-      this.deactivateWebview();
+  closeTab(task, tab) {
+    if (!task || !tab) return;
+    task.tabs = task.tabs.filter((t) => t !== tab);
+    this.renderRail();
+    if (this.activeTab === tab) {
+      if (task.isGeneral && task.tabs.length === 0) this.openStart();
+      else this.openTask(task);
+    } else if (this.view === 'task' && this.activeTask === task) {
+      this.renderTaskView();
     }
   }
 
-  getFaviconUrl(url) {
-    try {
-      const urlObj = new URL(url);
-      if (urlObj.protocol !== 'http:' && urlObj.protocol !== 'https:') return null;
-      return `${urlObj.protocol}//${urlObj.hostname}/favicon.ico`;
-    } catch (e) {
-      return null;
-    }
+  // ---------------------------------------------------------------------------
+  // Rail
+  // ---------------------------------------------------------------------------
+
+  setupRail() {
+    document.querySelector('.rail__new')?.addEventListener('click', () => this.openStart());
+    document.querySelector('.rail__memory')?.addEventListener('click', () => this.openMemory());
+    // easter-eggs.js owns the About panel; looked up at click time.
+    document.querySelector('.rail__about')?.addEventListener('click', () => window.GyrusEasterEggs?.openAbout?.());
   }
 
-  duplicateTab(tab) {
-    const activeTask = this.activeTask;
-    if (!activeTask) return;
+  renderRail() {
+    const list = this.el.railTasks;
+    if (!list) return;
+    list.innerHTML = '';
+    const showing = this.view === 'task' || this.view === 'page';
 
-    activeTask.tabs.push(this.newTab(tab.url, `${tab.title} (copy)`, tab.snippet, tab.origin));
-    this.renderTasks();
-    this.renderTabs();
-    this.switchToTab(activeTask.tabs.length - 1);
-  }
-
-  renderTasks() {
-    const tabList = document.querySelector('.sidebar__tab-list');
-    if (!tabList) return;
-
-    tabList.innerHTML = '';
-
-    const rows = [this.generalTask, ...this.tasks];
-    rows.forEach((task, i) => {
-      const isGeneral = i === 0;
-      const index = i - 1; // index into this.tasks
-      const isActive = isGeneral ? this.isGeneralTaskActive
-        : (!this.isGeneralTaskActive && index === this.activeTaskIndex);
-
-      const kind = isGeneral ? 'Everyday searches' : (INTENT_NAMES[task.intent] || 'Task');
-      const taskElement = this.rowElement({
-        className: `sidebar__tab${isGeneral ? ' is-general-task' : ''}`,
+    [this.general, ...this.tasks].forEach((task) => {
+      const isActive = showing && this.activeTask === task;
+      const meta = task.isGeneral ? 'Everyday searches' : (INTENTS[task.intent]?.name || 'Task');
+      const row = this.rowElement({
+        className: 'rail__task',
         isActive,
+        icon: task.isGeneral ? ICONS.general : (ICONS[task.intent] || ICONS.task),
         title: task.title,
-        meta: kind,
+        meta,
         count: task.tabs.length,
-        closeLabel: isGeneral ? null : 'Close task',
-        onOpen: () => (isGeneral ? this.switchToGeneralTask() : this.switchToTask(index))
+        countLabel: task.isGeneral ? 'Pages' : 'Sources',
+        closeLabel: task.isGeneral ? null : 'Close task',
+        onOpen: () => this.openTask(task),
+        onClose: () => this.closeTask(task)
       });
-
-      const closeButton = taskElement.querySelector('.row__close');
-      closeButton?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.closeTask(index);
-      });
-
-      tabList.appendChild(taskElement);
+      list.appendChild(row);
     });
 
-    this.updateTabsPresence();
+    document.querySelector('.rail__new')?.classList.toggle('is-active', this.view === 'start');
   }
 
-  renderTabs() {
-    const rightSidebar = document.querySelector('.right-sidebar__tab-list');
-    if (!rightSidebar) return;
-
-    rightSidebar.innerHTML = '';
-
-    const activeTask = this.activeTask;
-
-    if (activeTask && activeTask.tabs.length > 0) {
-      activeTask.tabs.forEach((tab, index) => {
-        const tabElement = this.rowElement({
-          className: 'right-sidebar__tab',
-          isActive: index === this.activeTabIndex,
-          title: tab.title,
-          favicon: tab.favicon,
-          closeLabel: 'Close tab',
-          onOpen: () => this.switchToTab(index)
-        });
-
-        tabElement.querySelector('.row__close').addEventListener('click', (e) => {
-          e.stopPropagation();
-          this.closeTab(index);
-        });
-
-        rightSidebar.appendChild(tabElement);
-      });
-    } else {
-      const empty = document.createElement('p');
-      empty.className = 'empty-note';
-      empty.textContent = 'No tabs in this task yet.';
-      rightSidebar.appendChild(empty);
-    }
-
-    this.updateTabsPresence();
-    this.updatePageStatus();
-  }
-
-  // The one list row used for tasks and tabs (.row in _controls.css).
-  // Focusable; Enter or Space opens it.
-  rowElement({ className, isActive, title, meta, count, favicon, closeLabel, onOpen }) {
+  // The one list row (.row in _controls.css). Focusable; Enter or Space opens it.
+  rowElement({ className, isActive, icon, title, meta, count, countLabel, closeLabel, onOpen, onClose }) {
     const row = document.createElement('div');
     row.className = `row ${className}${isActive ? ' is-active' : ''}`;
     row.setAttribute('role', 'listitem');
     row.tabIndex = 0;
+    row.title = meta ? `${title} (${meta})` : title;
     if (isActive) row.setAttribute('aria-current', 'true');
     row.innerHTML = `
-      ${favicon !== undefined ? `<span class="row__icon">${favicon ? `<img src="${escapeHtml(favicon)}" alt="" onerror="this.remove()">` : ''}</span>` : ''}
+      ${icon ? `<span class="rail__icon">${icon}</span>` : ''}
       <span class="row__text">
-        <span class="row__title" title="${escapeHtml(title)}">${escapeHtml(title)}</span>
-        ${meta ? `<span class="row__meta label">${escapeHtml(meta)}</span>` : ''}
+        <span class="row__title">${escapeHtml(title)}</span>
+        ${meta ? `<span class="row__meta">${escapeHtml(meta)}</span>` : ''}
       </span>
-      ${count !== undefined ? `<span class="row__count" title="Tabs in this task">${count}</span>` : ''}
-      ${closeLabel ? `<button class="icon-button icon-button--sm icon-button--quiet row__close" type="button" title="${closeLabel}" aria-label="${closeLabel}">${ICON_CLOSE}</button>` : ''}
+      ${count !== undefined ? `<span class="row__count" title="${escapeHtml(countLabel || '')}">${count}</span>` : ''}
+      ${closeLabel ? `<button class="icon-button icon-button--sm icon-button--quiet row__close" type="button" title="${closeLabel}" aria-label="${closeLabel}">${ICONS.close}</button>` : ''}
     `;
     row.addEventListener('click', (e) => {
-      if (!e.target.closest('.row__close')) onOpen();
+      if (e.target.closest('.row__close')) {
+        e.stopPropagation();
+        onClose?.();
+        return;
+      }
+      onOpen();
     });
     row.addEventListener('keydown', (e) => {
       if ((e.key === 'Enter' || e.key === ' ') && e.target === row) {
@@ -565,68 +438,107 @@ class App {
     return row;
   }
 
-  // The intro under the query box only shows until the first tab exists.
-  updateTabsPresence() {
-    document.body.classList.toggle('has-tabs', this.allTabs().length > 0);
-  }
+  // ---------------------------------------------------------------------------
+  // Search box (start screen)
+  // ---------------------------------------------------------------------------
 
-  // One quiet line above the page saying how the open tab got there.
-  updatePageStatus() {
-    const container = document.querySelector('#webview-container .webview-container');
-    const status = container?.querySelector('.page-status');
-    const text = status?.querySelector('.page-status__text');
-    if (!container || !status || !text) return;
+  setupSearch() {
+    const form = this.el.searchForm;
+    const input = this.el.searchInput;
+    if (!form || !input) return;
 
-    const tab = this.tabs[this.activeTabIndex];
-    const line = tab && tab.origin;
-    text.textContent = line || '';
-    status.hidden = !line;
-    container.classList.toggle('has-status', !!line);
-  }
+    const suggestions = document.createElement('div');
+    suggestions.className = 'search__suggestions suggestions panel';
+    suggestions.setAttribute('role', 'listbox');
+    suggestions.hidden = true;
+    form.appendChild(suggestions);
 
-  // What happened after a search, in one line. Uses the intent from the API.
-  searchOutcome(intent, linkCount) {
-    const name = INTENT_NAMES[intent] || intent || 'Answer';
-    if (intent === 'Research' || intent === 'News') {
-      const crew = intent === 'Research' ? 'research crew' : 'news crew';
-      if (linkCount > 0) {
-        return `${name}: the ${crew} found ${linkCount} ${linkCount === 1 ? 'source' : 'sources'}`;
+    let items = [];
+    let selected = -1;
+
+    const hide = () => {
+      suggestions.hidden = true;
+      selected = -1;
+    };
+    const fillWith = (text) => {
+      input.value = text;
+      hide();
+      input.focus();
+    };
+    const pick = (s) => {
+      if (s.type === 'duplicate') {
+        input.value = `@duplicate ${s.name}`;
+        submit();
+      } else {
+        fillWith(`@${s.name} `);
       }
-      return `${name}: the ${crew} found nothing, so this is a normal search`;
-    }
-    return `${name}: opened a normal search`;
-  }
-
-  setupWindowControls() {
-    document
-      .getElementById('close-btn')
-      ?.addEventListener('click', () => window.electronAPI.closeWindow());
-    document
-      .getElementById('minimize-btn')
-      ?.addEventListener('click', () => window.electronAPI.minimizeWindow());
-    document
-      .getElementById('maximize-btn')
-      ?.addEventListener('click', () => window.electronAPI.maximizeWindow());
-  }
-
-  setupButtonActiveStates() {
-    const buttons = document.querySelectorAll('.nav-button');
-    buttons.forEach(button => {
-      button.addEventListener('mousedown', () => {
-        button.classList.add('is-active');
+    };
+    const show = () => {
+      items = this.buildSuggestions(input.value);
+      if (items.length === 0) { hide(); return; }
+      suggestions.innerHTML = '';
+      items.forEach((s) => {
+        const item = this.suggestionElement(s);
+        item.addEventListener('mousedown', (e) => e.preventDefault()); // keep focus
+        item.addEventListener('click', () => pick(s));
+        suggestions.appendChild(item);
       });
-      button.addEventListener('mouseup', () => {
-        button.classList.remove('is-active');
-      });
-      // Also remove class if mouse leaves the button while pressed
-      button.addEventListener('mouseleave', () => {
-        button.classList.remove('is-active');
+      suggestions.hidden = false;
+      selected = -1;
+    };
+    const move = (step) => {
+      const rows = suggestions.querySelectorAll('.row');
+      if (rows.length === 0) return;
+      rows[selected]?.classList.remove('is-selected');
+      selected = (selected + step + rows.length) % rows.length;
+      rows[selected].classList.add('is-selected');
+      rows[selected].scrollIntoView({ block: 'nearest' });
+    };
+
+    const submit = () => {
+      const query = input.value.trim();
+      if (!query) return;
+      hide();
+      this.submitQuery(query);
+    };
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (!suggestions.hidden && selected >= 0 && items[selected]) {
+        pick(items[selected]);
+        return;
+      }
+      submit();
+    });
+
+    input.addEventListener('input', show);
+    input.addEventListener('keydown', (e) => {
+      if (!suggestions.hidden) {
+        if (e.key === 'ArrowDown') { e.preventDefault(); move(1); return; }
+        if (e.key === 'ArrowUp') { e.preventDefault(); move(-1); return; }
+        if (e.key === 'Escape') { e.stopPropagation(); hide(); return; }
+      }
+      if (e.key === 'Tab' && input.value.startsWith('@')) {
+        const completion = this.completeSuggestion(input.value);
+        if (completion) {
+          e.preventDefault();
+          fillWith(completion.text);
+          if (completion.type === 'duplicate') submit();
+        }
+      }
+    });
+    input.addEventListener('blur', () => setTimeout(hide, 150));
+
+    document.querySelectorAll('.example').forEach((button) => {
+      button.addEventListener('click', () => {
+        input.value = button.dataset.query || button.textContent.trim();
+        submit();
       });
     });
   }
 
   // Suggestions for "@..." input: commands, search engines, and with
-  // "@duplicate words" the matching tabs of the active task.
+  // "@duplicate words" the matching pages of the current task.
   buildSuggestions(text) {
     if (!text.startsWith('@')) return [];
     const term = text.substring(1).toLowerCase();
@@ -640,9 +552,9 @@ class App {
 
     if (term.startsWith('duplicate')) {
       const wanted = term.substring(9).trim();
-      this.tabs.forEach((tab) => {
+      this.currentTabs().forEach((tab) => {
         if (tab.title.toLowerCase().includes(wanted) || tab.url.toLowerCase().includes(wanted)) {
-          suggestions.push({ type: 'duplicate', name: tab.title, description: 'Copy this tab', tab });
+          suggestions.push({ type: 'duplicate', name: tab.title, description: 'Copy this page', tab });
         }
       });
     }
@@ -658,426 +570,683 @@ class App {
 
     if (term.startsWith('duplicate')) {
       const wanted = term.substring(9).trim();
-      const tabs = this.tabs.filter((tab) =>
+      const tabs = this.currentTabs().filter((tab) =>
         tab.title.toLowerCase().startsWith(wanted) || tab.url.toLowerCase().includes(wanted));
       if (tabs.length === 1) return { type: 'duplicate', text: `@duplicate ${tabs[0].title}` };
     }
     return null;
   }
 
-  suggestionElement(className, suggestion) {
+  suggestionElement(suggestion) {
     const item = document.createElement('div');
-    item.className = `row ${className}`;
+    item.className = 'row';
     item.setAttribute('role', 'option');
     const name = suggestion.type === 'duplicate' ? '@duplicate' : `@${suggestion.name}`;
     const description = suggestion.type === 'duplicate' ? suggestion.name : suggestion.description;
     item.innerHTML = `
       <span class="row__text">
         <span class="row__title">${escapeHtml(name)}</span>
-        <span class="row__meta label">${escapeHtml(description)}</span>
+        <span class="row__meta">${escapeHtml(description)}</span>
       </span>
     `;
     return item;
   }
 
-  setupQueryInput() {
-    const queryInput_container = document.querySelector('.query-input-container');
-    const queryInput_textArea = document.querySelector('.query-input__text-area');
-    const queryInput_sendButton = document.querySelector('.query-input__send-button');
-    const focusOverlay = document.querySelector('.focus-overlay');
-    const characterLimit = 50;
+  currentTabs() {
+    return (this.activeTask || this.general).tabs;
+  }
 
-    if (!queryInput_container || !queryInput_textArea) return;
+  // Everything typed into the search box comes through here.
+  async submitQuery(query) {
+    // Team joke: asking for a chatbot gets you the lobotomy page.
+    if (this.isLLMProvider(query)) {
+      const tab = this.addGeneralTab({ url: this.getLobotomyUrl(query), title: LOBOTOMY_TITLE, origin: LOBOTOMY_ORIGIN, why: LOBOTOMY_ORIGIN, fixedTitle: true });
+      this.openTab(this.general, tab);
+      return;
+    }
 
-    const autocompleteContainer = document.createElement('div');
-    autocompleteContainer.className = 'query-input__autocomplete suggestions panel';
-    autocompleteContainer.setAttribute('role', 'listbox');
-    queryInput_container.appendChild(autocompleteContainer);
+    // "@engine words", "@command", or a typed address: no backend involved.
+    const isAtCommand = /^@(\w+)(?:\s+(.+))?$/.test(query);
+    const looksLikeUrl = /^https?:\/\//i.test(query) ||
+      (!/\s/.test(query) && /\.(com|org|net|ai|io|dev|edu|gov)(\/|:|\?|#|$)/i.test(query));
+    if (isAtCommand || looksLikeUrl) {
+      this.processUrlInput(query);
+      return;
+    }
 
-    let selectedIndex = -1;
-    let filteredSuggestions = [];
+    await this.runSearch(query);
+  }
 
-    const placeCaretAtEnd = () => {
-      const range = document.createRange();
-      const selection = window.getSelection();
-      range.selectNodeContents(queryInput_textArea);
-      range.collapse(false);
-      selection.removeAllRanges();
-      selection.addRange(range);
-    };
+  // ---------------------------------------------------------------------------
+  // The run: intent guess, then the crew (or a normal search)
+  // ---------------------------------------------------------------------------
 
-    const fillWith = (text) => {
-      queryInput_textArea.innerText = text;
-      hideAutocomplete();
-      queryInput_textArea.focus();
-      placeCaretAtEnd();
-    };
+  // Waits ms, or less if the run is skipped or cancelled.
+  wait(run, ms) {
+    if (run.skip || run.cancelled || ms <= 0) return Promise.resolve();
+    return new Promise((resolve) => {
+      const timer = setTimeout(done, ms);
+      function done() {
+        clearTimeout(timer);
+        run.wakers.delete(done);
+        resolve();
+      }
+      run.wakers.add(done);
+    });
+  }
 
-    const showAutocomplete = (text) => {
-      const suggestions = this.buildSuggestions(text);
-      if (suggestions.length === 0) {
-        hideAutocomplete();
+  wake(run) {
+    [...run.wakers].forEach((fn) => fn());
+  }
+
+  skipRun() {
+    if (!this.run) return;
+    this.run.skip = true;
+    this.wake(this.run);
+  }
+
+  // Leaving the run screen stops the animation. What the search created stays.
+  cancelRun() {
+    if (!this.run) return;
+    this.run.cancelled = true;
+    this.wake(this.run);
+    this.run = null;
+    this.closeChooser({ resume: false });
+  }
+
+  // forcedIntent comes from "Not right?"; replaces is the search it corrects.
+  async runSearch(query, { forcedIntent = null, replaces = null } = {}) {
+    this.cancelRun();
+    const run = { query, skip: false, cancelled: false, held: false, wakers: new Set(), result: null };
+    this.run = run;
+    this.activeTask = null;
+    this.activeTab = null;
+    this.renderRunThinking(query);
+    this.setView('run');
+
+    const started = Date.now();
+    // The real crews can take a while; say so if the wait gets long.
+    const slowNote = setTimeout(() => {
+      const thinking = this.run === run && this.el.runView.querySelector('.run__thinking');
+      if (!thinking) return;
+      const note = document.createElement('p');
+      note.className = 'run__slow caption';
+      note.textContent = 'Research and news crews can take a minute.';
+      thinking.after(note);
+    }, 3000);
+    let data;
+    if (forcedIntent && !INTENTS[forcedIntent].crew && !isDemo()) {
+      // The real backend classifies for itself; a correction to an everyday
+      // intent needs no crew, so it skips the backend.
+      data = { query, intent: forcedIntent };
+    } else {
+      try {
+        data = await window.GyrusAPI.searchQuery(query, forcedIntent ? { intent: forcedIntent } : {});
+      } catch (error) {
+        console.error('Error calling backend API:', error);
+        data = { query, intent: 'Answer', failed: true };
+      }
+    }
+    clearTimeout(slowNote);
+    await this.wait(run, RUN_TIMING.think - (Date.now() - started));
+
+    if (replaces) this.removeSearch(replaces);
+
+    const intent = INTENTS[data.intent] ? data.intent : 'Answer';
+    const links = INTENTS[intent].crew ? (Array.isArray(data) ? data : (data.links || [])) : [];
+    const searchId = uid();
+
+    if (links.length > 0) {
+      run.result = {
+        task: this.addTask({
+          query,
+          intent,
+          steps: Array.isArray(data.steps) ? data.steps : defaultSteps(intent, links.length),
+          sources: links,
+          searchId,
+          demo: !!data.demo
+        })
+      };
+    } else {
+      run.result = {
+        tab: this.addGeneralSearch(data.query || query, intent, searchId, {
+          crewFoundNothing: !!INTENTS[intent].crew,
+          failed: !!data.failed
+        })
+      };
+    }
+    run.intent = intent;
+    run.searchId = searchId;
+
+    if (run.cancelled) return;
+    this.renderRunOutcome(run);
+
+    if (reducedMotion()) {
+      // No ticking: everything shows at once, then the task opens.
+      this.setAllSteps('is-done');
+      await this.wait(run, RUN_TIMING.still);
+    } else {
+      await this.wait(run, RUN_TIMING.intent);
+      const steps = [...this.el.runView.querySelectorAll('.step')];
+      for (const step of steps) {
+        if (run.skip || run.cancelled) break;
+        step.className = 'step is-active';
+        await this.wait(run, RUN_TIMING.step);
+        step.className = 'step is-done';
+      }
+      await this.wait(run, RUN_TIMING.open);
+    }
+    if (!run.held) this.finishRun(run);
+  }
+
+  finishRun(run) {
+    if (this.run !== run || run.cancelled) return;
+    this.run = null;
+    if (run.result.task) this.openTask(run.result.task);
+    else this.openTab(this.general, run.result.tab);
+  }
+
+  setAllSteps(state) {
+    this.el.runView.querySelectorAll('.step').forEach((step) => { step.className = `step ${state}`; });
+  }
+
+  renderRunThinking(query) {
+    this.el.runView.innerHTML = `
+      <div class="run">
+        <p class="label">You searched</p>
+        <h1 class="run__query">${escapeHtml(query)}</h1>
+        <div class="run__guess card">
+          <p class="run__thinking">Working out what you're trying to do</p>
+        </div>
+        <button class="run__skip button button--text" type="button">Skip</button>
+      </div>
+    `;
+    this.el.runView.querySelector('.run__skip').addEventListener('click', () => this.skipRun());
+  }
+
+  renderRunOutcome(run) {
+    const info = INTENTS[run.intent];
+    const task = run.result.task;
+    const crewHtml = task
+      ? `
+        <div class="crew card">
+          <h2 class="crew__title label">The ${escapeHtml(info.crew)} at work</h2>
+          ${this.stepsHtml(task.steps, 'is-pending')}
+        </div>`
+      : `<p class="run__note">${escapeHtml(info.crew
+        ? `The ${info.crew} found nothing for this, so Gyrus opens a normal search.`
+        : NO_CREW_LINES[run.intent])}</p>`;
+
+    this.el.runView.innerHTML = `
+      <div class="run">
+        <p class="label">You searched</p>
+        <h1 class="run__query">${escapeHtml(run.query)}</h1>
+        ${this.intentHtml(run.intent, 'run__guess card')}
+        ${crewHtml}
+        <button class="run__skip button button--text" type="button">${task ? 'Skip to the sources' : 'Skip'}</button>
+      </div>
+    `;
+    this.el.runView.querySelector('.run__skip').addEventListener('click', () => this.skipRun());
+    this.el.runView.querySelector('.intent__fix').addEventListener('click', (e) => {
+      // Hold the run where it is while the user picks.
+      run.held = true;
+      this.skipRun();
+      this.setAllSteps('is-done');
+      this.openChooser(e.currentTarget, { query: run.query, current: run.intent, replaces: run.searchId, run });
+    });
+  }
+
+  // "Gyrus thinks you're doing: Research" + meaning + "Not right?"
+  intentHtml(intent, className) {
+    const info = INTENTS[intent] || INTENTS.Answer;
+    return `
+      <div class="intent ${className}">
+        <p class="intent__guess"><span class="intent__lead">Gyrus thinks you're doing:</span> <strong class="intent__name">${escapeHtml(info.name)}</strong></p>
+        <p class="intent__meaning caption">${escapeHtml(info.meaning)}</p>
+        <button class="intent__fix button button--text" type="button" aria-haspopup="true">Not right?</button>
+      </div>
+    `;
+  }
+
+  stepsHtml(steps, state) {
+    return `<ol class="steps">${steps.map((text) => `
+      <li class="step ${state}">
+        <span class="step__mark" aria-hidden="true">${ICONS.check}</span>
+        <span class="step__text">${escapeHtml(text)}</span>
+      </li>`).join('')}</ol>`;
+  }
+
+  // ---------------------------------------------------------------------------
+  // "Not right?": pick another intent and run the search again
+  // ---------------------------------------------------------------------------
+
+  openChooser(anchor, { query, current, replaces, run = null }) {
+    this.closeChooser({ resume: false });
+    const chooser = document.createElement('div');
+    chooser.className = 'chooser panel';
+    chooser.setAttribute('role', 'menu');
+    chooser.setAttribute('aria-label', 'What are you trying to do?');
+
+    // The real backend decides on its own whether to send a crew, so a
+    // correction can only move a search to an everyday intent.
+    const canForceCrew = isDemo();
+    const options = INTENT_ORDER.filter((key) => key === current || !INTENTS[key].crew || canForceCrew);
+
+    chooser.innerHTML = `
+      <p class="chooser__head label">What are you trying to do?</p>
+      ${options.map((key) => `
+        <button class="row${key === current ? ' is-active' : ''}" type="button" role="menuitem" data-intent="${key}"${key === current ? ' aria-current="true"' : ''}>
+          <span class="row__text">
+            <span class="row__title">${escapeHtml(INTENTS[key].name)}</span>
+            <span class="row__meta">${escapeHtml(INTENTS[key].meaning)}</span>
+          </span>
+        </button>`).join('')}
+      ${canForceCrew ? '' : '<p class="chooser__note caption">With the backend running, Gyrus decides by itself when to send a crew.</p>'}
+    `;
+    chooser.addEventListener('click', (e) => {
+      const button = e.target.closest('[data-intent]');
+      if (!button) return;
+      const intent = button.dataset.intent;
+      if (intent === current) {
+        this.closeChooser({ resume: true });
         return;
       }
+      this.closeChooser({ resume: false });
+      this.runSearch(query, { forcedIntent: intent, replaces });
+    });
+    document.body.appendChild(chooser);
 
-      filteredSuggestions = suggestions;
-      autocompleteContainer.innerHTML = '';
+    const rect = anchor.getBoundingClientRect();
+    const width = chooser.offsetWidth;
+    chooser.style.top = `${Math.min(rect.bottom + 4, window.innerHeight - chooser.offsetHeight - 8)}px`;
+    chooser.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - width - 8))}px`;
 
-      suggestions.forEach((suggestion) => {
-        const item = this.suggestionElement('query-input__autocomplete-item', suggestion);
-        item.addEventListener('mousedown', (e) => e.preventDefault()); // keep focus
-        item.addEventListener('click', async () => {
-          if (suggestion.type === 'duplicate') {
-            queryInput_textArea.innerText = `@duplicate ${suggestion.name}`;
-            await submitQuery();
-          } else {
-            fillWith(`@${suggestion.name} `);
-          }
-        });
-        autocompleteContainer.appendChild(item);
-      });
+    this.chooser = { el: chooser, run, anchor };
+    anchor.setAttribute('aria-expanded', 'true');
+    chooser.querySelector('button:not(.is-active)')?.focus();
+  }
 
-      autocompleteContainer.style.display = 'block';
-      selectedIndex = -1;
-    };
+  // resume: carry on to where the run was going.
+  closeChooser({ resume }) {
+    if (!this.chooser) return;
+    const { el, run, anchor } = this.chooser;
+    this.chooser = null;
+    el.remove();
+    anchor?.setAttribute('aria-expanded', 'false');
+    if (run && resume) {
+      run.held = false;
+      this.finishRun(run);
+    } else if (anchor && document.body.contains(anchor)) {
+      anchor.focus();
+    }
+  }
 
-    const hideAutocomplete = () => {
-      autocompleteContainer.style.display = 'none';
-      selectedIndex = -1;
-    };
+  // ---------------------------------------------------------------------------
+  // Task view
+  // ---------------------------------------------------------------------------
 
-    const selectAutocompleteItem = (direction) => {
-      const items = autocompleteContainer.querySelectorAll('.query-input__autocomplete-item');
-      if (items.length === 0) return;
-      if (selectedIndex >= 0) items[selectedIndex].classList.remove('is-selected');
-      if (direction === 'up') {
-        selectedIndex = selectedIndex <= 0 ? items.length - 1 : selectedIndex - 1;
-      } else {
-        selectedIndex = selectedIndex >= items.length - 1 ? 0 : selectedIndex + 1;
-      }
-      items[selectedIndex].classList.add('is-selected');
-      items[selectedIndex].scrollIntoView({ block: 'nearest' });
-    };
+  renderTaskView() {
+    const task = this.activeTask;
+    const view = this.el.taskView;
+    if (!task) { view.innerHTML = ''; return; }
 
-    const handleTabCompletion = async () => {
-      const text = queryInput_textArea.innerText;
-      const completion = this.completeSuggestion(text);
-      if (completion) {
-        fillWith(completion.text);
-        if (completion.type === 'duplicate') await submitQuery();
-        return;
-      }
-      showAutocomplete(text);
-    };
+    const cards = task.tabs.map((tab, i) => `
+      <button class="source card${tab.visited ? ' is-visited' : ''}" type="button" data-index="${i}">
+        <span class="source__top">
+          <span class="source__name label">${escapeHtml(tab.source || hostOf(tab.url))}</span>
+          ${tab.visited ? `<span class="source__read caption">${ICONS.check}Read</span>` : ''}
+        </span>
+        <span class="source__title">${escapeHtml(tab.title)}</span>
+        ${tab.why ? `<span class="source__why">${escapeHtml(tab.why)}</span>` : ''}
+      </button>`).join('');
 
-    // Clicking the dimmed area leaves editor mode.
-    if (focusOverlay) {
-      focusOverlay.addEventListener('click', (e) => {
-        if (e.target === focusOverlay) {
-          queryInput_container.classList.remove('is-editor-mode');
-          focusOverlay.classList.remove('is-active');
-          queryInput_textArea.blur();
-        }
+    if (task.isGeneral) {
+      view.innerHTML = `
+        <div class="task">
+          <header class="task__head">
+            <p class="label">Task</p>
+            <h1 class="task__title" tabindex="-1">General</h1>
+            <p class="task__intro caption">Everyday searches Gyrus left alone: quick facts, shopping and sites. No crew is sent for these.</p>
+          </header>
+          <section class="task__list" aria-label="Pages">
+            <h2 class="label">${task.tabs.length === 1 ? '1 page' : `${task.tabs.length} pages`}</h2>
+            ${task.tabs.length ? `<div class="sources">${cards}</div>`
+              : '<p class="task__empty caption">Nothing here yet. Quick facts, shopping and sites you search for will land here.</p>'}
+          </section>
+        </div>
+      `;
+    } else {
+      const unread = task.tabs.filter((t) => !t.visited).length;
+      view.innerHTML = `
+        <div class="task">
+          <header class="task__head">
+            <p class="label">Task</p>
+            <h1 class="task__title" tabindex="-1">${escapeHtml(task.title)}</h1>
+            ${task.intent ? this.intentHtml(task.intent, 'task__intent') : ''}
+          </header>
+          ${task.steps.length ? `
+          <section class="crew card" aria-label="What the crew did">
+            <h2 class="crew__title label">What the ${escapeHtml(INTENTS[task.intent]?.crew || 'crew')} did</h2>
+            ${this.stepsHtml(task.steps, 'is-done')}
+          </section>` : ''}
+          <section class="task__list" aria-label="Reading list">
+            <h2 class="label">Reading list${task.tabs.length ? `: ${task.tabs.length} ${task.tabs.length === 1 ? 'source' : 'sources'}, ${unread} unread` : ''}</h2>
+            ${task.tabs.length ? `<div class="sources">${cards}</div>`
+              : '<p class="task__empty caption">No sources in this task yet.</p>'}
+          </section>
+          ${task.demo ? '<p class="task__demo caption">Demo: the crew and its sources are simulated.</p>' : ''}
+        </div>
+      `;
+      view.querySelector('.intent__fix')?.addEventListener('click', (e) => {
+        this.openChooser(e.currentTarget, { query: task.query, current: task.intent, replaces: task.searchId });
       });
     }
 
-    const switchToEditorMode = () => {
-      if (!queryInput_container.classList.contains('is-editor-mode')) {
-        queryInput_container.classList.remove('is-collapsed');
-        queryInput_container.classList.add('is-editor-mode');
-        focusOverlay?.classList.add('is-active');
-        adjustHeight();
-      }
-    };
-
-    const toggleEditorMode = () => {
-      queryInput_container.classList.toggle('is-editor-mode');
-      focusOverlay?.classList.toggle('is-active');
-      adjustHeight();
-    };
-
-    const clearInput = () => {
-      queryInput_textArea.innerText = '';
-      queryInput_textArea.style.height = 'auto';
-    };
-
-    const submitQuery = async () => {
-      const query = queryInput_textArea.innerText.trim();
-      if (!query) return;
-
-      hideAutocomplete();
-      queryInput_container.classList.add('is-active');
-      setTimeout(() => queryInput_container.classList.remove('is-active'), 100);
-
-      // Team joke: asking for a chatbot gets you the lobotomy page.
-      if (this.isLLMProvider(query)) {
-        const lobotomyUrl = this.getLobotomyUrl(query);
-        const origin = 'You asked for an AI chat site';
-        if (this.isGeneralTaskActive) {
-          this.createTabInGeneralTask(lobotomyUrl, LOBOTOMY_TITLE, '', origin);
-        } else {
-          await this.createTab(lobotomyUrl, LOBOTOMY_TITLE, '', origin, { recordLink: false });
-        }
-        clearInput();
-        this.activateWebview();
-        return;
-      }
-
-      // "@engine words", "@command", or a typed address: no backend involved.
-      const isAtCommand = /^@(\w+)(?:\s+(.+))?$/.test(query);
-      const looksLikeUrl = query.startsWith('http') ||
-        (!/\s/.test(query) && /\.(com|org|net|ai)(\/|:|\?|#|$)/i.test(query));
-      if (isAtCommand || looksLikeUrl) {
-        await this.processUrlInput(query);
-        clearInput();
-        if (this.allTabs().length > 0) this.activateWebview();
-        return;
-      }
-
-      const searchUrl = (q) => `https://www.google.com/search?q=${encodeURIComponent(q)}`;
-
-      try {
-        // Real backend if running, otherwise the demo stand-in (js/api.js)
-        const data = await window.GyrusAPI.searchQuery(query);
-
-        this.currentQuery = query;
-        this.currentIntent = data.intent || 'Answer';
-        const intent = this.currentIntent;
-
-        const links = (intent === 'News' || intent === 'Research')
-          ? (Array.isArray(data) ? data : (data.links || []))
-          : [];
-
-        if (links.length > 0) {
-          // Research and News get their own task, one tab per source.
-          const taskTitle = query.length > 30 ? query.substring(0, 30) + '...' : query;
-          this.createTask(taskTitle, intent);
-
-          const origin = this.searchOutcome(intent, links.length);
-          for (const link of links) {
-            await this.createTab(link.link, link.title, link.snippet, origin, { recordLink: false });
-          }
-          // One add-links call for the whole set.
-          await this.addLinksToBackend(links.map((link) => link.link).filter(Boolean));
-          this.switchToTab(0);
-        } else {
-          // Navigational, Transactional, Answer (or a crew that found nothing):
-          // a normal search in General.
-          const searchText = data.query || query;
-          this.switchToGeneralTask();
-          this.createTabInGeneralTask(searchUrl(searchText), `${searchText} - Google search`, '',
-            this.searchOutcome(intent, 0));
-        }
-      } catch (error) {
-        console.error('Error calling backend API:', error);
-        this.switchToGeneralTask();
-        this.createTabInGeneralTask(searchUrl(query), `${query} - Google search`, '',
-          'Something went wrong, so this is a normal search');
-      }
-
-      clearInput();
-      this.activateWebview();
-    };
-
-    // Grow with the text; long queries switch to editor mode.
-    const adjustHeight = () => {
-      queryInput_textArea.style.height = 'auto';
-      queryInput_textArea.style.height = queryInput_textArea.scrollHeight + 'px';
-      if (queryInput_textArea.innerText.length > characterLimit) {
-        switchToEditorMode();
-      }
-    };
-
-    queryInput_textArea.addEventListener('input', (e) => {
-      adjustHeight();
-      showAutocomplete(e.target.innerText);
-    });
-
-    queryInput_textArea.addEventListener('keydown', (e) => {
-      if (autocompleteContainer.style.display === 'block') {
-        if (e.key === 'ArrowDown') {
-          e.preventDefault();
-          selectAutocompleteItem('down');
-          return;
-        }
-        if (e.key === 'ArrowUp') {
-          e.preventDefault();
-          selectAutocompleteItem('up');
-          return;
-        }
-        if (e.key === 'Enter' && selectedIndex >= 0 && filteredSuggestions[selectedIndex]) {
-          e.preventDefault();
-          const picked = filteredSuggestions[selectedIndex];
-          if (picked.type === 'duplicate') {
-            queryInput_textArea.innerText = `@duplicate ${picked.name}`;
-            submitQuery();
-          } else {
-            fillWith(`@${picked.name} `);
-          }
-          return;
-        }
-        if (e.key === 'Escape') {
-          hideAutocomplete();
-          return;
-        }
-      }
-
-      if (e.key === 'Tab' && queryInput_textArea.innerText.startsWith('@')) {
-        e.preventDefault();
-        handleTabCompletion();
-        return;
-      }
-
-      if (e.key === 'Escape' && queryInput_container.classList.contains('is-editor-mode')) {
-        e.preventDefault();
-        toggleEditorMode();
-        queryInput_textArea.blur();
-        return;
-      }
-      // Shift+Enter toggles editor mode for short queries.
-      if (e.shiftKey && e.key === 'Enter') {
-        e.preventDefault();
-        if (queryInput_textArea.innerText.length <= characterLimit) {
-          toggleEditorMode();
-        }
-        return;
-      }
-      // Enter submits in the one-line box; Ctrl/Cmd+Enter submits in editor mode.
-      if (e.key === 'Enter' &&
-          (!queryInput_container.classList.contains('is-editor-mode') || e.ctrlKey || e.metaKey)) {
-        e.preventDefault();
-        submitQuery();
-      }
-    });
-
-    queryInput_sendButton?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      submitQuery();
-    });
-
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('.query-input-container')) {
-        hideAutocomplete();
-      }
-    });
-
-    queryInput_textArea.addEventListener('blur', () => {
-      setTimeout(hideAutocomplete, 150);
+    view.querySelectorAll('.source').forEach((card) => {
+      card.addEventListener('click', () => this.openTab(task, task.tabs[Number(card.dataset.index)]));
     });
   }
 
-  // Menu button opens a small dropdown. The dropdown lives on <body> because
-  // the header clips its overflow.
-  setupMenuButton() {
-    const menuButton = document.querySelector('.menu-button');
-    if (!menuButton) return;
+  // ---------------------------------------------------------------------------
+  // Page view
+  // ---------------------------------------------------------------------------
 
-    const dropdown = document.createElement('div');
-    dropdown.className = 'menu-dropdown panel';
-    dropdown.setAttribute('role', 'menu');
-    document.body.appendChild(dropdown);
+  setupPageBar() {
+    document.querySelector('.page__back')?.addEventListener('click', () => this.backToList());
+    document.querySelector('.page__intent')?.addEventListener('click', (e) => {
+      const tab = this.activeTab;
+      if (!tab || !tab.query || !tab.intent) return;
+      this.openChooser(e.currentTarget, { query: tab.query, current: tab.intent, replaces: tab.searchId });
+    });
+  }
 
-    const close = () => {
-      dropdown.classList.remove('is-open');
-      menuButton.classList.remove('is-active');
-      menuButton.setAttribute('aria-expanded', 'false');
-    };
+  renderPageBar() {
+    const tab = this.activeTab;
+    const task = this.activeTask;
+    if (!tab || !task) return;
+    const label = document.querySelector('.page__back-label');
+    if (label) label.textContent = task.isGeneral ? 'Back to General' : 'Back to sources';
+    const title = document.querySelector('.page__title');
+    if (title) title.textContent = tab.title;
+    const origin = document.querySelector('.page__origin');
+    if (origin) {
+      origin.textContent = task.isGeneral ? (tab.origin || '') : `${tab.source ? `${tab.source}, ` : ''}picked by the ${INTENTS[task.intent]?.crew || 'crew'}`;
+    }
+    const fix = document.querySelector('.page__intent');
+    if (fix) fix.hidden = !(tab.query && tab.intent);
+    this.updateOpenLink();
+  }
 
-    const items = () => [
-      {
-        label: this.panelsPinned ? 'Let the panels hide again' : 'Keep the panels open',
-        run: () => this.setPanelsPinned?.(!this.panelsPinned)
-      },
-      { label: 'Memory', run: () => this.openNetworkModal() },
-      { label: 'New search', run: () => this.openQueryInput() },
-      {
-        label: 'About Gyrus',
-        run: () => window.GyrusEasterEggs?.openAbout?.(),
-        hidden: !(window.GyrusEasterEggs && typeof window.GyrusEasterEggs.openAbout === 'function')
+  // In a plain browser most external sites refuse to load in a frame, so offer
+  // the real tab. Electron's <webview> loads them itself.
+  updateOpenLink() {
+    const open = document.querySelector('.page__open');
+    if (!open) return;
+    const url = this.el.webview?.src || '';
+    const show = !window.GYRUS_IN_ELECTRON && !!window.GyrusPlatform?.isExternal(url);
+    open.hidden = !show;
+    if (show) open.href = url;
+  }
+
+  setupWebview() {
+    const webview = this.el.webview;
+    const urlBar = this.el.urlBar;
+    const loading = document.querySelector('.webview-loading');
+    if (!webview) return;
+
+    const showLobotomy = (destination) => {
+      const url = this.getLobotomyUrl(destination);
+      webview.src = url;
+      if (this.activeTab) {
+        Object.assign(this.activeTab, { url, title: LOBOTOMY_TITLE, origin: LOBOTOMY_ORIGIN, why: LOBOTOMY_ORIGIN });
+        this.renderPageBar();
       }
-    ];
-
-    const open = () => {
-      dropdown.innerHTML = '';
-      items().filter((item) => !item.hidden).forEach((item) => {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'row';
-        button.setAttribute('role', 'menuitem');
-        button.textContent = item.label;
-        button.addEventListener('click', (e) => {
-          e.stopPropagation();
-          close();
-          item.run();
-        });
-        dropdown.appendChild(button);
-      });
-      const rect = menuButton.getBoundingClientRect();
-      dropdown.style.top = `${rect.bottom + 4}px`; // --space-1 below the button
-      dropdown.style.right = `${Math.max(8, window.innerWidth - rect.right)}px`;
-      dropdown.classList.add('is-open');
-      menuButton.classList.add('is-active');
-      menuButton.setAttribute('aria-expanded', 'true');
-      dropdown.querySelector('button')?.focus();
     };
 
-    menuButton.addEventListener('click', (e) => {
+    webview.addEventListener('did-start-loading', () => { if (loading) loading.hidden = false; });
+    webview.addEventListener('did-stop-loading', () => {
+      if (loading) loading.hidden = true;
+      const tab = this.activeTab;
+      if (tab && !tab.fixedTitle) {
+        tab.title = webview.getTitle() || tab.title;
+        this.renderPageBar();
+        this.renderRail();
+      }
+    });
+    webview.addEventListener('did-fail-load', () => { if (loading) loading.hidden = true; });
+
+    webview.addEventListener('did-navigate', (e) => {
+      if (this.isLLMProvider(e.url)) {
+        showLobotomy(e.url);
+        return;
+      }
+      if (urlBar) urlBar.value = e.url;
+      if (this.activeTab && e.url !== 'about:blank') this.activeTab.url = e.url;
+      this.updateOpenLink();
+    });
+
+    webview.addEventListener('did-navigate-in-page', (e) => {
+      // demo-page.html's "Back to sources" link, inside Electron's <webview>.
+      if (/demo-page\.html[^#]*#back$/.test(e.url || '')) {
+        this.backToList();
+        return;
+      }
+      if (urlBar) urlBar.value = e.url;
+      if (this.activeTab) this.activeTab.url = e.url;
+    });
+
+    // The same link inside the plain-browser iframe posts a message instead.
+    window.addEventListener('message', (e) => {
+      if (e.source && e.source === webview.contentWindow && e.data && e.data.gyrus === 'back') {
+        this.backToList();
+      }
+    });
+
+    // Address bar: an address opens in this page; anything with spaces (or no
+    // dot) is a normal search. In demo mode that search is a stand-in page.
+    urlBar?.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        urlBar.value = this.activeTab?.url || '';
+        urlBar.blur();
+        return;
+      }
+      if (e.key !== 'Enter') return;
       e.preventDefault();
-      e.stopPropagation();
-      if (dropdown.classList.contains('is-open')) close(); else open();
+      const typed = urlBar.value.trim();
+      if (!typed) return;
+      urlBar.blur();
+
+      if (this.isLLMProvider(typed)) {
+        if (this.activeTab) showLobotomy(typed);
+        else this.submitQuery(typed);
+        return;
+      }
+
+      let url = typed;
+      let title = typed;
+      if (!/^(https?|about|file):/i.test(typed)) {
+        const isSearch = /\s/.test(typed) || !typed.includes('.');
+        if (isSearch) {
+          url = isDemo()
+            ? window.GyrusAPI.demoPageUrl({ kind: 'search', q: typed })
+            : `https://www.google.com/search?q=${encodeURIComponent(typed)}`;
+        } else {
+          url = `https://${typed}`;
+        }
+      } else {
+        title = hostOf(typed) || typed;
+      }
+      const tab = this.addGeneralTab({ url, title, origin: 'Opened what you typed in the address bar', why: 'Opened what you typed in the address bar', fixedTitle: false });
+      this.openTab(this.general, tab);
     });
 
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('.menu-dropdown')) close();
+    document.getElementById('back-btn')?.addEventListener('click', () => {
+      if (webview.canGoBack()) webview.goBack();
+      else this.backToList();
     });
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && dropdown.classList.contains('is-open')) close();
+    document.getElementById('forward-btn')?.addEventListener('click', () => {
+      if (webview.canGoForward()) webview.goForward();
     });
   }
 
-  openNetworkModal() {
-    const networkModal = document.getElementById('network-modal');
-    if (!networkModal) return;
-    networkModal.classList.add('is-visible');
-    document.querySelector('.network-button')?.classList.add('is-active');
-    networkModal.querySelector('.network-modal__close')?.focus();
+  // ---------------------------------------------------------------------------
+  // @-commands and typed addresses (search box)
+  // ---------------------------------------------------------------------------
+
+  // "a | b" (or ; ,) opens several. Pages land in General; the @-commands act on
+  // the task you are in.
+  processUrlInput(input) {
+    const delimiter = ['|', ';', ','].find((d) => input.includes(d));
+    if (delimiter) {
+      input.split(delimiter).map((part) => part.trim()).filter(Boolean)
+        .forEach((part) => this.processUrlInput(part));
+      return;
+    }
+
+    const atMatch = input.match(/^@(\w+)(?:\s+(.+))?$/);
+    if (atMatch) {
+      const name = atMatch[1].toLowerCase();
+      const argument = (atMatch[2] || '').trim();
+      const task = this.activeTask || this.general;
+
+      switch (name) {
+        case 'duplicate': {
+          if (!argument) return;
+          const wanted = argument.toLowerCase();
+          const match = task.tabs.find((tab) =>
+            tab.title.toLowerCase().includes(wanted) || tab.url.toLowerCase().includes(wanted));
+          if (match) {
+            const copy = { ...match, id: uid(), title: `${match.title} (copy)`, visited: false, searchId: null };
+            task.tabs.push(copy);
+            this.renderRail();
+            this.openTab(task, copy);
+          }
+          return;
+        }
+        case 'close':
+          if (this.activeTab) this.closeTab(task, this.activeTab);
+          return;
+        case 'closeall':
+          task.tabs = [];
+          this.renderRail();
+          if (task.isGeneral) this.openStart(); else this.openTask(task);
+          return;
+        case 'newtask':
+          this.openTask(this.addTask({ query: 'New task', intent: null }));
+          return;
+        case 'closetask':
+          if (!task.isGeneral) this.closeTask(task);
+          return;
+        default:
+          break;
+      }
+
+      // "@engine words" searches that site; "@engine" alone opens it.
+      const engine = ENGINE_URLS[name] ? name : 'google';
+      const [homeUrl, searchUrl] = ENGINE_URLS[engine];
+      let url = argument ? searchUrl(encodeURIComponent(argument)) : homeUrl;
+      if (this.isLLMProvider(argument) || this.isLLMProvider(url)) {
+        const tab = this.addGeneralTab({ url: this.getLobotomyUrl(url), title: LOBOTOMY_TITLE, origin: LOBOTOMY_ORIGIN, why: LOBOTOMY_ORIGIN, fixedTitle: true });
+        this.openTab(this.general, tab);
+        return;
+      }
+      if (isDemo() && argument) {
+        url = window.GyrusAPI.demoPageUrl({ kind: 'search', q: argument, title: `${argument}: ${engine} search (example)` });
+      }
+      const origin = argument ? `Opened a ${engine} search` : `Opened ${engine}`;
+      const tab = this.addGeneralTab({ url, title: argument ? `${engine} search: ${argument}` : engine, origin, why: origin, fixedTitle: !!argument });
+      this.openTab(this.general, tab);
+      return;
+    }
+
+    const url = /^https?:\/\//i.test(input) ? input : `https://${input}`;
+    try {
+      new URL(url);
+    } catch (e) {
+      return;
+    }
+    if (this.isLLMProvider(url)) {
+      const tab = this.addGeneralTab({ url: this.getLobotomyUrl(url), title: LOBOTOMY_TITLE, origin: LOBOTOMY_ORIGIN, why: LOBOTOMY_ORIGIN, fixedTitle: true });
+      this.openTab(this.general, tab);
+      return;
+    }
+    const origin = 'Opened the address you typed';
+    const tab = this.addGeneralTab({ url, title: hostOf(url) || input, origin, why: origin });
+    this.openTab(this.general, tab);
+  }
+
+  // Team joke: real navigation to a chat product goes to lobotomy.html.
+  // Matches a URL whose hostname is (or is under) a chat product's domain, or a
+  // query that is exactly a product name or domain. Searching "claude shannon
+  // information theory", or a search URL that merely contains a name, does not.
+  isLLMProvider(input) {
+    const raw = String(input || '').trim().toLowerCase();
+    if (!raw) return false;
+
+    if (LLM_CHAT_NAMES.has(raw.replace(/\s+/g, ' '))) return true;
+    if (/\s/.test(raw)) return false; // a phrase, not an address
+
+    let url;
+    try {
+      url = new URL(/^[a-z][a-z0-9+.-]*:\/\//.test(raw) ? raw : `https://${raw}`);
+    } catch (_) {
+      return false;
+    }
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
+
+    const host = url.hostname.replace(/^www\./, '');
+    if (host === 'bing.com' && url.pathname.startsWith('/chat')) return true;
+    return LLM_CHAT_DOMAINS.some((domain) => host === domain || host.endsWith(`.${domain}`));
+  }
+
+  // lobotomy.html sits next to index.html, so it is same-origin and loads in
+  // the page area in both Electron and a plain browser. It offers "Proceed with
+  // lobotomy" when it knows where you were going, so pass the destination as
+  // ?to= (http/https only).
+  getLobotomyUrl(destination = '') {
+    const page = new URL('lobotomy.html', window.location.href);
+    const raw = String(destination || '').trim();
+    if (raw && !/\s/.test(raw)) {
+      try {
+        const target = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
+        if (target.hostname.includes('.')) page.searchParams.set('to', target.href);
+      } catch (_) { /* not a URL: no way through */ }
+    }
+    return page.href;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Memory
+  // ---------------------------------------------------------------------------
+
+  setupMemory() {
+    const modal = this.el.modal;
+    if (!modal) return;
+    modal.querySelector('.network-modal__overlay')?.addEventListener('click', () => this.closeMemory());
+    modal.querySelector('.network-modal__close')?.addEventListener('click', () => this.closeMemory());
+    document.getElementById('refresh-network')?.addEventListener('click', () => this.updateNetworkGraph());
+  }
+
+  openMemory() {
+    const modal = this.el.modal;
+    if (!modal) return;
+    this.memoryReturnFocus = document.activeElement;
+    modal.classList.add('is-visible');
+    document.querySelector('.rail__memory')?.classList.add('is-active');
+    modal.querySelector('.network-modal__close')?.focus();
     this.updateNetworkGraph();
   }
 
-  closeNetworkModal() {
-    document.getElementById('network-modal')?.classList.remove('is-visible');
-    document.querySelector('.network-button')?.classList.remove('is-active');
+  closeMemory() {
+    this.el.modal?.classList.remove('is-visible');
+    document.querySelector('.rail__memory')?.classList.remove('is-active');
+    this.memoryReturnFocus?.focus?.();
+    this.memoryReturnFocus = null;
   }
 
-  setupNetworkButton() {
-    const networkButton = document.querySelector('.network-button');
-    const networkModal = document.getElementById('network-modal');
-    if (!networkButton || !networkModal) return;
-
-    networkButton.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      this.openNetworkModal();
-    });
-
-    networkModal.querySelector('.network-modal__overlay')
-      ?.addEventListener('click', () => this.closeNetworkModal());
-    networkModal.querySelector('.network-modal__close')
-      ?.addEventListener('click', () => this.closeNetworkModal());
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && networkModal.classList.contains('is-visible')) {
-        this.closeNetworkModal();
-      }
-    });
-
-    document.getElementById('refresh-network')
-      ?.addEventListener('click', () => this.updateNetworkGraph());
-  }
-
-  // Draws the memory graph. Ink on paper: topics are filled squares, searches
-  // are open circles, links are small dots. Clicking a node turns it blue and
-  // darkens its edges; that is the only use of colour.
+  // Draws the memory graph. Topics are filled squares, searches open circles,
+  // links small dots, all in text colours. Clicking a node turns it and its
+  // edges orange; that is the only use of colour.
   async updateNetworkGraph() {
     const container = document.getElementById('network-graph');
     if (!container) return;
@@ -1146,9 +1315,17 @@ class App {
       .on('zoom', (event) => g.attr('transform', event.transform));
     svg.call(zoom);
 
+    // Links show their host; a demo stand-in shows its title instead.
     const shortName = (d) => {
       if (d.type !== 'link') return d.name.length > 40 ? d.name.slice(0, 40) + '...' : d.name;
-      try { return new URL(d.name).hostname.replace(/^www\./, ''); } catch (_) { return d.name; }
+      try {
+        const u = new URL(d.name);
+        if (/demo-page\.html$/.test(u.pathname)) {
+          const t = u.searchParams.get('title') || 'Demo page';
+          return t.length > 40 ? t.slice(0, 40) + '...' : t;
+        }
+        return u.hostname.replace(/^www\./, '');
+      } catch (_) { return d.name; }
     };
 
     const link = g.append('g')
@@ -1174,7 +1351,7 @@ class App {
         .on('drag', dragged)
         .on('end', dragended));
 
-    node.append('title').text((d) => d.name);
+    node.append('title').text((d) => shortName(d) === d.name ? d.name : `${shortName(d)}\n${d.name}`);
 
     const label = g.append('g')
       .selectAll('text')
@@ -1186,7 +1363,6 @@ class App {
       .attr('dy', 4)
       .text(shortName);
 
-    // Click a node: it turns blue, its edges go to full ink. Click it again to clear.
     let selectedId = null;
     const select = (id) => {
       selectedId = selectedId === id ? null : id;
@@ -1243,500 +1419,43 @@ class App {
     }
   }
 
-  setupWebview() {
-    const webview = document.getElementById('browser-webview');
-    const webviewContainer = document.getElementById('webview-container');
-    const urlBarInput = document.querySelector('.url-bar__input');
-    const loadingIndicator = document.querySelector('.webview-loading');
+  // ---------------------------------------------------------------------------
+  // Window, keyboard, zoom
+  // ---------------------------------------------------------------------------
 
-    if (!webview || !webviewContainer) return;
-
-    const showLobotomy = (destination) => {
-      const lobotomyUrl = this.getLobotomyUrl(destination);
-      webview.src = lobotomyUrl;
-      const tab = this.tabs[this.activeTabIndex];
-      if (tab) {
-        tab.url = lobotomyUrl;
-        tab.title = LOBOTOMY_TITLE;
-        tab.origin = 'You asked for an AI chat site';
-        this.renderTabs();
-      }
-    };
-
-    webview.addEventListener('did-start-loading', () => {
-      if (loadingIndicator) loadingIndicator.style.display = 'block';
-    });
-
-    webview.addEventListener('did-stop-loading', () => {
-      if (loadingIndicator) loadingIndicator.style.display = 'none';
-      webview.setAttribute('data-ready', 'true');
-
-      const tab = this.tabs[this.activeTabIndex];
-      if (tab) {
-        tab.url = webview.src;
-        tab.title = webview.getTitle() || tab.title || 'New tab';
-        this.renderTabs();
-      }
-    });
-
-    webview.addEventListener('did-fail-load', () => {
-      if (loadingIndicator) loadingIndicator.style.display = 'none';
-      console.error('Webview failed to load');
-    });
-
-    // Address bar: an address opens in the current tab; anything with spaces
-    // (or no dot) is a Google search.
-    urlBarInput?.addEventListener('keydown', (e) => {
-      if (e.key !== 'Enter') return;
-      e.preventDefault();
-      const typed = urlBarInput.value.trim();
-      if (!typed) return;
-
-      if (this.isLLMProvider(typed)) {
-        if (this.tabs.length === 0) {
-          this.createTabInGeneralTask(this.getLobotomyUrl(typed), LOBOTOMY_TITLE, '', 'You asked for an AI chat site');
-        } else {
-          showLobotomy(typed);
-        }
-        this.activateWebview();
-        return;
-      }
-
-      let url = typed;
-      if (!/^(https?|about|file):/i.test(typed)) {
-        url = (/\s/.test(typed) || !typed.includes('.'))
-          ? `https://www.google.com/search?q=${encodeURIComponent(typed)}`
-          : `https://${typed}`;
-      }
-
-      const tab = this.tabs[this.activeTabIndex];
-      if (tab) {
-        tab.url = url;
-        tab.origin = 'Opened the address you typed';
-        webview.src = url;
-        this.renderTabs();
-      } else {
-        this.createTabInGeneralTask(url, typed, '', 'Opened the address you typed');
-      }
-      urlBarInput.blur();
-      this.activateWebview();
-    });
-
-    document.getElementById('back-btn')?.addEventListener('click', () => {
-      if (webview.canGoBack()) webview.goBack();
-    });
-
-    document.getElementById('forward-btn')?.addEventListener('click', () => {
-      if (webview.canGoForward()) webview.goForward();
-    });
-
-    // "Start page": back to the query box. Open tabs stay where they are.
-    document.getElementById('home-btn')?.addEventListener('click', () => this.openQueryInput());
-
-    webview.addEventListener('did-navigate', (e) => {
-      if (urlBarInput) urlBarInput.value = e.url;
-      const tab = this.tabs[this.activeTabIndex];
-      if (tab) tab.url = e.url;
-      if (this.isLLMProvider(e.url)) showLobotomy(e.url);
-    });
-
-    webview.addEventListener('did-navigate-in-page', (e) => {
-      if (urlBarInput) urlBarInput.value = e.url;
-      const tab = this.tabs[this.activeTabIndex];
-      if (tab) tab.url = e.url;
-    });
+  setupWindowControls() {
+    document.getElementById('close-btn')?.addEventListener('click', () => window.electronAPI.closeWindow());
+    document.getElementById('minimize-btn')?.addEventListener('click', () => window.electronAPI.minimizeWindow());
+    document.getElementById('maximize-btn')?.addEventListener('click', () => window.electronAPI.maximizeWindow());
   }
 
-  // Header + tasks panel open together from the top or left edge; the tabs
-  // panel opens from the right edge. Hover, click or keyboard focus on the
-  // edge tabs opens them too. "Keep the panels open" in the menu pins them.
-  setupHeaderVisibility() {
-    const header = document.querySelector('.app-header');
-    const sidebar = document.querySelector('.sidebar');
-    const rightSidebar = document.querySelector('.right-sidebar');
-    const urlBarInput = document.querySelector('.url-bar__input');
-    if (!header) return;
-
-    const EDGE_PX = 5;
-    const HIDE_DELAY_MS = 750;
-
-    let headerOn = false;
-    let leftOn = false;
-    let rightOn = false;
-    let pinned = false;
-    let inHeader = false;
-    let inLeft = false;
-    let inRight = false;
-    let focusInHeader = false;
-    let focusInLeft = false;
-    let focusInRight = false;
-    let hideTimer = null;
-
-    const sync = () => {
-      header.classList.toggle('is-visible', headerOn);
-      sidebar?.classList.toggle('is-visible', leftOn);
-      rightSidebar?.classList.toggle('is-visible', rightOn);
-      document.body.classList.toggle('tasks-open', leftOn);
-      document.body.classList.toggle('tabs-open', rightOn);
-      if (this.hasActiveWebview) this.updateWebviewPosition();
-    };
-
-    const cancelHide = () => {
-      clearTimeout(hideTimer);
-      hideTimer = null;
-    };
-
-    const showBoth = () => {
-      cancelHide();
-      if (!headerOn || !leftOn) {
-        headerOn = true;
-        leftOn = true;
-        sync();
-      }
-    };
-
-    const hideBoth = () => {
-      if (pinned) return;
-      const keep = inHeader || inLeft || focusInHeader || focusInLeft || document.activeElement === urlBarInput;
-      if (keep || (!headerOn && !leftOn)) return;
-      headerOn = false;
-      leftOn = false;
-      sync();
-    };
-
-    const startHideTimer = () => {
-      if (hideTimer || pinned) return;
-      hideTimer = setTimeout(() => {
-        hideTimer = null;
-        hideBoth();
-      }, HIDE_DELAY_MS);
-    };
-
-    const showRight = () => {
-      if (!rightOn) {
-        rightOn = true;
-        sync();
-      }
-    };
-
-    const hideRight = (force = false) => {
-      if (!rightOn || (!force && (pinned || inRight || focusInRight))) return;
-      rightOn = false;
-      sync();
-    };
-
-    this.panelsPinned = false;
-    this.setPanelsPinned = (on) => {
-      pinned = !!on;
-      this.panelsPinned = pinned;
-      if (pinned) {
-        showBoth();
-        showRight();
-      } else {
-        startHideTimer();
-        hideRight();
-      }
-    };
-
-    document.addEventListener('mousemove', (e) => {
-      const nearTop = e.clientY <= EDGE_PX;
-      const nearLeft = e.clientX <= EDGE_PX;
-      if (nearTop || nearLeft) {
-        showBoth();
-      } else if ((headerOn || leftOn) && !inHeader && !inLeft) {
-        startHideTimer();
-      }
-
-      const fromRight = window.innerWidth - e.clientX;
-      const rightZone = rightOn ? SIDEBAR_WIDTH_PX : EDGE_PX;
-      if (fromRight <= rightZone) {
-        showRight();
-      } else {
-        hideRight();
-      }
-    });
-
-    const track = (el, onEnter, onLeave, setFocus) => {
-      if (!el) return;
-      el.addEventListener('mouseenter', onEnter);
-      el.addEventListener('mouseleave', onLeave);
-      el.addEventListener('focusin', () => { setFocus(true); onEnter(); });
-      el.addEventListener('focusout', (e) => {
-        setFocus(!!(e.relatedTarget && el.contains(e.relatedTarget)));
-        onLeave();
-      });
-    };
-
-    track(header,
-      () => { inHeader = true; showBoth(); },
-      () => { inHeader = false; startHideTimer(); },
-      (v) => { focusInHeader = v; });
-    track(sidebar,
-      () => { inLeft = true; showBoth(); },
-      () => { inLeft = false; startHideTimer(); },
-      (v) => { focusInLeft = v; });
-    track(rightSidebar,
-      () => { inRight = true; showRight(); },
-      () => { inRight = false; },
-      (v) => { focusInRight = v; });
-
-    urlBarInput?.addEventListener('blur', startHideTimer);
-
-    // Visible handles for the hidden panels.
-    const leftTab = document.querySelector('.edge-tab--left');
-    const rightTab = document.querySelector('.edge-tab--right');
-    ['mouseenter', 'click', 'focus'].forEach((type) => {
-      leftTab?.addEventListener(type, () => {
-        showBoth();
-        if (type !== 'mouseenter') sidebar?.querySelector('.sidebar__add-tab')?.focus();
-      });
-      rightTab?.addEventListener(type, () => {
-        showRight();
-        if (type !== 'mouseenter') rightSidebar?.querySelector('.right-sidebar__url-input')?.focus();
-      });
-    });
-
-    // Esc closes open panels (unless pinned).
+  setupKeyboard() {
     document.addEventListener('keydown', (e) => {
-      if (e.key !== 'Escape' || pinned) return;
-      if (rightOn) hideRight(true);
-      if (headerOn || leftOn) {
-        const active = document.activeElement;
-        if (active && (header.contains(active) || sidebar?.contains(active))) active.blur();
-        focusInHeader = false;
-        focusInLeft = false;
-        cancelHide();
-        hideBoth();
-      }
-    });
-
-    this.setupRightSidebarInput();
-  }
-
-  setupRightSidebarInput() {
-    const urlInput = document.querySelector('.right-sidebar__url-input');
-    const autocomplete = document.querySelector('.right-sidebar__autocomplete');
-    if (!urlInput || !autocomplete) return;
-
-    let selectedIndex = -1;
-    let filteredSuggestions = [];
-
-    const run = async (text) => {
-      urlInput.value = '';
-      hideAutocomplete();
-      await this.processUrlInput(text);
-      if (this.allTabs().length > 0) this.activateWebview();
-    };
-
-    const fillWith = (text) => {
-      urlInput.value = text;
-      hideAutocomplete();
-      urlInput.focus();
-    };
-
-    const showAutocomplete = (text) => {
-      const suggestions = this.buildSuggestions(text);
-      if (suggestions.length === 0) {
-        hideAutocomplete();
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 't') {
+        e.preventDefault();
+        this.openStart();
         return;
       }
-
-      filteredSuggestions = suggestions;
-      autocomplete.innerHTML = '';
-      suggestions.forEach((suggestion) => {
-        const item = this.suggestionElement('right-sidebar__autocomplete-item', suggestion);
-        item.addEventListener('mousedown', (e) => e.preventDefault());
-        item.addEventListener('click', () => {
-          if (suggestion.type === 'duplicate') run(`@duplicate ${suggestion.name}`);
-          else fillWith(`@${suggestion.name} `);
-        });
-        autocomplete.appendChild(item);
-      });
-
-      autocomplete.style.display = 'block';
-      selectedIndex = -1;
-    };
-
-    const hideAutocomplete = () => {
-      autocomplete.style.display = 'none';
-      selectedIndex = -1;
-    };
-
-    const selectAutocompleteItem = (direction) => {
-      const items = autocomplete.querySelectorAll('.right-sidebar__autocomplete-item');
-      if (items.length === 0) return;
-      if (selectedIndex >= 0) items[selectedIndex].classList.remove('is-selected');
-      if (direction === 'up') {
-        selectedIndex = selectedIndex <= 0 ? items.length - 1 : selectedIndex - 1;
-      } else {
-        selectedIndex = selectedIndex >= items.length - 1 ? 0 : selectedIndex + 1;
-      }
-      items[selectedIndex].classList.add('is-selected');
-      items[selectedIndex].scrollIntoView({ block: 'nearest' });
-    };
-
-    urlInput.addEventListener('input', (e) => showAutocomplete(e.target.value));
-
-    urlInput.addEventListener('keydown', async (e) => {
-      if (e.key === 'Enter') {
+      if (e.key !== 'Escape') return;
+      // One overlay at a time, innermost first. The About panel handles its own Esc.
+      if (this.chooser) {
         e.preventDefault();
-        const picked = autocomplete.style.display === 'block' && selectedIndex >= 0
-          ? filteredSuggestions[selectedIndex] : null;
-        if (picked) {
-          if (picked.type === 'duplicate') run(`@duplicate ${picked.name}`);
-          else fillWith(`@${picked.name} `);
-          return;
-        }
-        const text = urlInput.value.trim();
-        if (text) run(text);
-      } else if (e.key === 'Escape') {
-        hideAutocomplete();
-        urlInput.blur();
-      } else if (e.key === 'ArrowDown') {
+        this.closeChooser({ resume: true });
+      } else if (this.el.modal?.classList.contains('is-visible')) {
         e.preventDefault();
-        selectAutocompleteItem('down');
-      } else if (e.key === 'ArrowUp') {
+        this.closeMemory();
+      } else if (this.view === 'run') {
         e.preventDefault();
-        selectAutocompleteItem('up');
-      } else if (e.key === 'Tab' && urlInput.value.startsWith('@')) {
-        e.preventDefault();
-        const completion = this.completeSuggestion(urlInput.value);
-        if (!completion) showAutocomplete(urlInput.value);
-        else if (completion.type === 'duplicate') run(completion.text);
-        else fillWith(completion.text);
+        this.skipRun();
       }
     });
 
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('.right-sidebar__new-tab-input')) hideAutocomplete();
+    // Clicking outside the chooser closes it.
+    document.addEventListener('mousedown', (e) => {
+      if (this.chooser && !this.chooser.el.contains(e.target) && e.target !== this.chooser.anchor) {
+        this.closeChooser({ resume: true });
+      }
     });
-
-    urlInput.addEventListener('blur', () => setTimeout(hideAutocomplete, 150));
-  }
-
-  // Team joke: real navigation to a chat product goes to lobotomy.html.
-  // Matches a URL whose hostname is (or is under) a chat product's domain, or a
-  // query that is exactly a product name or domain. Searching "claude shannon
-  // information theory", or a search URL that merely contains a name, does not.
-  isLLMProvider(input) {
-    const raw = String(input || '').trim().toLowerCase();
-    if (!raw) return false;
-
-    if (LLM_CHAT_NAMES.has(raw.replace(/\s+/g, ' '))) return true;
-    if (/\s/.test(raw)) return false; // a phrase, not an address
-
-    let url;
-    try {
-      url = new URL(/^[a-z][a-z0-9+.-]*:\/\//.test(raw) ? raw : `https://${raw}`);
-    } catch (_) {
-      return false;
-    }
-    if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
-
-    const host = url.hostname.replace(/^www\./, '');
-    if (host === 'bing.com' && url.pathname.startsWith('/chat')) return true;
-    return LLM_CHAT_DOMAINS.some((domain) => host === domain || host.endsWith(`.${domain}`));
-  }
-
-  // lobotomy.html sits next to index.html, so it is same-origin and loads in
-  // the page area in both Electron and a plain browser.
-  // The lobotomy page offers "Proceed with lobotomy" when it knows where you
-  // were going, so pass the destination along as ?to= (http/https only).
-  getLobotomyUrl(destination = '') {
-    const page = new URL('lobotomy.html', window.location.href);
-    const raw = String(destination || '').trim();
-    if (raw && !/\s/.test(raw)) {
-      try {
-        const target = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
-        if (target.hostname.includes('.')) page.searchParams.set('to', target.href);
-      } catch (_) { /* not a URL: no way through */ }
-    }
-    return page.href;
-  }
-
-  // Input from the tabs panel and the query box's "@..." / address path.
-  // "a | b" (or ; ,) opens several. Everything here lands in General except
-  // the @-commands, which act on the task you are in.
-  async processUrlInput(input) {
-    const delimiter = ['|', ';', ','].find((d) => input.includes(d));
-    if (delimiter) {
-      const parts = input.split(delimiter).map((part) => part.trim()).filter(Boolean);
-      for (const part of parts) {
-        await this.processUrlInput(part);
-      }
-      return;
-    }
-
-    const atMatch = input.match(/^@(\w+)(?:\s+(.+))?$/);
-    if (atMatch) {
-      const name = atMatch[1].toLowerCase();
-      const argument = (atMatch[2] || '').trim();
-
-      switch (name) {
-        case 'duplicate': {
-          if (!argument) return;
-          const wanted = argument.toLowerCase();
-          const match = this.tabs.find((tab) =>
-            tab.title.toLowerCase().includes(wanted) || tab.url.toLowerCase().includes(wanted));
-          if (match) this.duplicateTab(match);
-          return;
-        }
-        case 'close':
-          this.closeTab(this.activeTabIndex);
-          return;
-        case 'closeall': {
-          const task = this.activeTask;
-          if (task) {
-            task.tabs = [];
-            this.activeTabIndex = 0;
-            const webview = document.getElementById('browser-webview');
-            if (webview) webview.src = 'about:blank';
-            this.renderTasks();
-            this.renderTabs();
-            this.showStartPageIfEmpty();
-          }
-          return;
-        }
-        case 'newtask':
-          this.createTask('New task');
-          return;
-        case 'closetask':
-          if (!this.isGeneralTaskActive) this.closeTask(this.activeTaskIndex);
-          return;
-        default:
-          break;
-      }
-
-      // "@engine words" searches that site; "@engine" alone opens it.
-      const engine = ENGINE_URLS[name] ? name : 'google';
-      const [homeUrl, searchUrl] = ENGINE_URLS[engine];
-      const url = argument ? searchUrl(encodeURIComponent(argument)) : homeUrl;
-      const title = argument ? `${engine} search: ${argument}` : engine;
-
-      this.switchToGeneralTask();
-      if (this.isLLMProvider(argument) || this.isLLMProvider(url)) {
-        this.createTabInGeneralTask(this.getLobotomyUrl(url), LOBOTOMY_TITLE, '', 'You asked for an AI chat site');
-        return;
-      }
-      this.createTabInGeneralTask(url, title, '',
-        argument ? `Opened a ${engine} search` : `Opened ${engine}`);
-      return;
-    }
-
-    const url = /^https?:\/\//i.test(input) ? input : `https://${input}`;
-    try {
-      new URL(url);
-    } catch (e) {
-      console.error('Invalid URL:', input);
-      return;
-    }
-
-    this.switchToGeneralTask();
-    if (this.isLLMProvider(url)) {
-      this.createTabInGeneralTask(this.getLobotomyUrl(url), LOBOTOMY_TITLE, '', 'You asked for an AI chat site');
-      return;
-    }
-    this.createTabInGeneralTask(url, input, '', 'Opened the address you typed');
   }
 
   // Block zoom shortcuts and gestures on the shell (pages keep their own).
@@ -1750,115 +1469,11 @@ class App {
     ['gesturestart', 'gesturechange', 'gestureend'].forEach((type) => {
       document.addEventListener(type, (e) => e.preventDefault());
     });
-
-    let lastTouchEnd = 0;
-    document.addEventListener('touchend', (e) => {
-      const now = Date.now();
-      if (now - lastTouchEnd <= 300) e.preventDefault();
-      lastTouchEnd = now;
-    }, false);
-  }
-
-  activateWebview() {
-    this.hasActiveWebview = true;
-    document.querySelector('.content-area')?.classList.add('has-active-webview');
-
-    const queryInputContainer = document.querySelector('.query-input-container');
-    if (queryInputContainer) {
-      queryInputContainer.classList.add('is-collapsed');
-      queryInputContainer.classList.remove('is-editor-mode');
-    }
-    document.querySelector('.focus-overlay')?.classList.remove('is-active');
-
-    const webviewContainer = document.getElementById('webview-container');
-    if (webviewContainer) webviewContainer.style.display = 'block';
-
-    this.updateWebviewPosition();
-    this.updatePageStatus();
-  }
-
-  // The page layer is fixed to the viewport and sized around whichever panels
-  // are open, moving on the same curve as the panels.
-  updateWebviewPosition() {
-    const page = document.querySelector('#webview-container .webview-container');
-    if (!page) return;
-
-    const headerOn = document.querySelector('.app-header')?.classList.contains('is-visible');
-    const leftOn = document.querySelector('.sidebar')?.classList.contains('is-visible');
-    const rightOn = document.querySelector('.right-sidebar')?.classList.contains('is-visible');
-    // The header's hairline sits inside its 48px; each sidebar adds a 1px border.
-    const top = headerOn ? HEADER_HEIGHT_PX : 0;
-    const left = leftOn ? SIDEBAR_WIDTH_PX + 1 : 0;
-    const right = rightOn ? SIDEBAR_WIDTH_PX + 1 : 0;
-
-    const move = 'var(--duration-panel) var(--ease-panel)';
-    Object.assign(page.style, {
-      position: 'fixed',
-      top: `${top}px`,
-      left: `${left}px`,
-      right: `${right}px`,
-      bottom: '0',
-      width: 'auto',
-      height: 'auto',
-      zIndex: '1',
-      transition: `top ${move}, left ${move}, right ${move}`
-    });
-  }
-
-  deactivateWebview() {
-    this.hasActiveWebview = false;
-    document.querySelector('.content-area')?.classList.remove('has-active-webview');
-    document.querySelector('.query-input-container')?.classList.remove('is-collapsed');
-
-    const webviewContainer = document.getElementById('webview-container');
-    if (webviewContainer) webviewContainer.style.display = 'none';
-
-    const page = webviewContainer?.querySelector('.webview-container');
-    if (page) {
-      ['position', 'top', 'left', 'right', 'bottom', 'width', 'height', 'zIndex', 'transition']
-        .forEach((prop) => { page.style[prop] = ''; });
-    }
-  }
-
-  setupCollapsedQueryInput() {
-    const queryInputContainer = document.querySelector('.query-input-container');
-    if (!queryInputContainer) return;
-
-    // The collapsed "Search" button is a real control: focusable, Enter/Space open it.
-    const expand = (e) => {
-      if (!queryInputContainer.classList.contains('is-collapsed')) return;
-      // Only the collapsed button itself. The Enter that submits a search
-      // bubbles up from the text area after the box has already collapsed,
-      // and must not reopen it.
-      if (e.target !== queryInputContainer) return;
-      e.preventDefault();
-      e.stopPropagation();
-      this.openQueryInput();
-    };
-    queryInputContainer.addEventListener('click', expand);
-    queryInputContainer.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') expand(e);
-    });
-
-    const syncRole = () => {
-      const collapsed = queryInputContainer.classList.contains('is-collapsed');
-      if (collapsed) {
-        queryInputContainer.setAttribute('role', 'button');
-        queryInputContainer.setAttribute('tabindex', '0');
-        queryInputContainer.setAttribute('aria-label', 'New search');
-      } else {
-        queryInputContainer.removeAttribute('role');
-        queryInputContainer.removeAttribute('tabindex');
-        queryInputContainer.removeAttribute('aria-label');
-      }
-    };
-    new MutationObserver(syncRole).observe(queryInputContainer, { attributes: true, attributeFilter: ['class'] });
-    syncRole();
   }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   componentManager.initialize().then(() => {
-    new App();
+    window.gyrusApp = new App();
   });
 });
