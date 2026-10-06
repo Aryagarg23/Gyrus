@@ -1,0 +1,159 @@
+/* About panel and easter-egg toast (js/easter-eggs.js).
+   Local tokens fall back to the design-system values so this looks right
+   whether or not the global --pi-* tokens are loaded. */
+.gyrus-about,
+.gyrus-toast {
+  --ga-ground: var(--pi-ground, #eae4d6);
+  --ga-surface: var(--pi-surface, #f2ede2);
+  --ga-ink: var(--pi-ink, #282215);
+  --ga-hairline: var(--pi-hairline, #c6b99f);
+  --ga-blue: var(--pi-blue, #3b42db);
+  --ga-muted: #6b604c;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  .gyrus-about,
+  .gyrus-toast {
+    --ga-ground: var(--pi-ground, #1c1c1c);
+    --ga-surface: var(--pi-surface, #232322);
+    --ga-ink: var(--pi-ink, #f1ede4);
+    --ga-hairline: var(--pi-hairline, #4a4640);
+    --ga-blue: var(--pi-blue, #6f76ec);
+    --ga-muted: #a69f92;
+  }
+}
+
+.gyrus-about {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.gyrus-about[hidden] { display: none; }
+
+.gyrus-about__backdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--ga-ground);
+  opacity: 0.85;
+}
+
+.gyrus-about__panel {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  background: var(--ga-surface);
+  color: var(--ga-ink);
+  border: 1px solid var(--ga-ink);
+  border-radius: 0;
+  box-shadow: none;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.gyrus-about__panel:focus { outline: none; }
+
+.gyrus-about__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--ga-hairline);
+}
+.gyrus-about__title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+.gyrus-about__close {
+  font: inherit;
+  font-weight: 500;
+  color: var(--ga-ink);
+  background: transparent;
+  border: 1px solid var(--ga-ink);
+  border-radius: 0;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+.gyrus-about__close:hover,
+.gyrus-about__close:focus-visible { outline: 2px solid var(--ga-blue); outline-offset: 2px; }
+
+.gyrus-about__section {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--ga-hairline);
+}
+.gyrus-about__section:last-child { border-bottom: 0; }
+.gyrus-about__section p { margin: 0 0 8px; }
+.gyrus-about__section p:last-child { margin-bottom: 0; }
+
+.gyrus-about__lede { font-size: 18px; }
+.gyrus-about__source { font-size: 13px; color: var(--ga-muted); }
+
+.gyrus-about__label {
+  margin: 0 0 12px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ga-muted);
+}
+
+.gyrus-about a { color: var(--ga-ink); text-underline-offset: 2px; }
+.gyrus-about a:hover { color: var(--ga-blue); }
+
+.gyrus-about__rows {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 8px 16px;
+  margin: 0;
+}
+.gyrus-about__rows dt { font-weight: 500; }
+.gyrus-about__rows dd { margin: 0; }
+
+.gyrus-about__commits {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.gyrus-about__commits h4 { margin: 0 0 8px; font-size: 14px; font-weight: 500; }
+.gyrus-about__commits ul { list-style: none; margin: 0; padding: 0; }
+.gyrus-about__commits li { padding: 4px 0; border-top: 1px solid var(--ga-hairline); }
+.gyrus-about code {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 13px;
+}
+
+@media (max-width: 560px) {
+  .gyrus-about__rows { grid-template-columns: 1fr; gap: 2px; }
+  .gyrus-about__rows dd { margin-bottom: 8px; }
+  .gyrus-about__commits { grid-template-columns: 1fr; }
+}
+
+.gyrus-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 10001;
+  max-width: min(440px, calc(100vw - 32px));
+  padding: 12px 16px;
+  background: var(--ga-ink);
+  color: var(--ga-ground);
+  border-radius: 0;
+  font-size: 14px;
+  line-height: 1.4;
+  opacity: 0;
+  transition: opacity 200ms ease;
+  pointer-events: none;
+}
+.gyrus-toast.is-visible { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .gyrus-toast { transition: none; }
+}
